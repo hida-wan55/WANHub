@@ -104,6 +104,28 @@
             </div>
           </div>
 
+          <!-- 添付ファイルカード -->
+          <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span><i class="bi bi-paperclip me-2"></i>添付ファイル</span>
+              <label class="btn btn-sm btn-outline-primary mb-0" for="file-input" style="cursor:pointer">
+                <i class="bi bi-upload me-1"></i>アップロード
+                <input type="file" id="file-input" style="display:none" multiple>
+              </label>
+            </div>
+            <div class="card-body">
+              <div id="upload-status" style="display:none" class="mb-2">
+                <div class="d-flex align-items-center gap-2 text-muted" style="font-size:13px">
+                  <span class="spinner-border spinner-border-sm"></span>
+                  <span id="upload-status-text">アップロード中...</span>
+                </div>
+              </div>
+              <div id="attachments-list">
+                <div class="text-center text-muted py-2" style="font-size:13.5px">読み込み中...</div>
+              </div>
+            </div>
+          </div>
+
           <!-- コメントカード -->
           <div class="card">
             <div class="card-header">

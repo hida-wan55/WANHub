@@ -19,10 +19,12 @@ async function init() {
     loadIssue(),
     loadSidebarProjects(),
     loadComments(),
+    loadAttachments(),
   ]);
 
   setupTitleEdit();
   setupDescEdit();
+  setupFileUpload();
   setupMetaSave();
   setupCommentSubmit();
   setupDelete();
@@ -238,6 +240,123 @@ function setupCommentSubmit() {
       await loadComments();
     }
   });
+}
+
+async function loadAttachments() {
+  const { data, error } = await supabaseClient
+    .from('attachments')
+    .select('*, user:profiles(name)')
+    .eq('issue_id', issueId)
+    .order('created_at', { ascending: false });
+
+  const el = document.getElementById('attachments-list');
+  if (error) { el.innerHTML = '<p class="text-danger" style="font-size:13.5px">読み込み失敗</p>'; return; }
+
+  if (!data || data.length === 0) {
+    el.innerHTML = '<p class="text-center text-muted py-2" style="font-size:13.5px">添付ファイルなし</p>';
+    return;
+  }
+
+  el.innerHTML = data.map(a => `
+    <div class="d-flex align-items-center justify-content-between py-2 border-bottom" id="attachment-${a.id}">
+      <div class="d-flex align-items-center gap-2" style="min-width:0">
+        <i class="bi ${fileIcon(a.file_type)} text-muted" style="font-size:18px;flex-shrink:0"></i>
+        <div style="min-width:0">
+          <a href="${getFileUrl(a.file_path)}" target="_blank" class="d-block text-truncate" style="font-size:13.5px;max-width:280px">
+            ${escapeHtml(a.file_name)}
+          </a>
+          <span style="font-size:11px;color:var(--text-muted)">${formatFileSize(a.file_size)} · ${escapeHtml(a.user?.name || '-')} · ${formatDate(a.created_at)}</span>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-outline-danger ms-2 flex-shrink-0" data-attachment-id="${a.id}" data-file-path="${escapeHtml(a.file_path)}">
+        <i class="bi bi-trash3"></i>
+      </button>
+    </div>
+  `).join('');
+
+  el.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-attachment-id]');
+    if (!btn) return;
+    if (!confirm('この添付ファイルを削除しますか？')) return;
+
+    const attachmentId = btn.dataset.attachmentId;
+    const filePath     = btn.dataset.filePath;
+
+    await supabaseClient.storage.from('attachments').remove([filePath]);
+    await supabaseClient.from('attachments').delete().eq('id', attachmentId);
+    document.getElementById(`attachment-${attachmentId}`)?.remove();
+
+    const remaining = el.querySelectorAll('[id^="attachment-"]');
+    if (remaining.length === 0) {
+      el.innerHTML = '<p class="text-center text-muted py-2" style="font-size:13.5px">添付ファイルなし</p>';
+    }
+  }, { once: true });
+}
+
+function setupFileUpload() {
+  document.getElementById('file-input').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    const oversized = files.filter(f => f.size > MAX_SIZE);
+    if (oversized.length > 0) {
+      showError(`10MB以上のファイルはアップロードできません：${oversized.map(f => f.name).join(', ')}`);
+      e.target.value = '';
+      return;
+    }
+
+    const statusEl     = document.getElementById('upload-status');
+    const statusTextEl = document.getElementById('upload-status-text');
+    statusEl.style.display = 'block';
+
+    for (const file of files) {
+      statusTextEl.textContent = `アップロード中：${file.name}`;
+      const filePath = `${issueId}/${Date.now()}_${file.name}`;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from('attachments')
+        .upload(filePath, file);
+
+      if (uploadError) { showError(`アップロード失敗：${file.name}`); continue; }
+
+      await supabaseClient.from('attachments').insert({
+        issue_id:  issueId,
+        user_id:   currentProfile?.id,
+        file_name: file.name,
+        file_path: filePath,
+        file_size: file.size,
+        file_type: file.type,
+      });
+    }
+
+    statusEl.style.display = 'none';
+    e.target.value = '';
+    await loadAttachments();
+  });
+}
+
+function getFileUrl(filePath) {
+  const { data } = supabaseClient.storage.from('attachments').getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
+function fileIcon(mimeType) {
+  if (!mimeType) return 'bi-file-earmark';
+  if (mimeType.startsWith('image/'))                      return 'bi-file-image';
+  if (mimeType === 'application/pdf')                     return 'bi-file-pdf';
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'bi-file-excel';
+  if (mimeType.includes('wordprocessingml') || mimeType.includes('msword')) return 'bi-file-word';
+  if (mimeType.includes('zip') || mimeType.includes('compressed')) return 'bi-file-zip';
+  if (mimeType.startsWith('video/'))                      return 'bi-file-play';
+  return 'bi-file-earmark';
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '-';
+  if (bytes < 1024)        return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function setupDelete() {
