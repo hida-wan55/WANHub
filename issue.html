@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>課題詳細 - WorkBoard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+  <!-- サイドバー -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <a href="/dashboard.html">
+        <div class="logo-icon"><i class="bi bi-kanban-fill"></i></div>
+        WorkBoard
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">メニュー</div>
+      <a href="/dashboard.html" class="sidebar-link">
+        <i class="bi bi-grid-fill"></i> ダッシュボード
+      </a>
+    </div>
+    <div class="sidebar-section" style="flex:1">
+      <div class="sidebar-label">プロジェクト</div>
+      <div id="sidebar-projects"></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-avatar" id="user-avatar-sidebar">--</div>
+      <div class="user-info">
+        <div class="user-name" id="user-name-sidebar">-</div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="ログアウト">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- メインコンテンツ -->
+  <div class="main-content">
+    <div class="top-header">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/dashboard.html">ダッシュボード</a></li>
+          <li class="breadcrumb-item"><a href="#" id="breadcrumb-project">-</a></li>
+          <li class="breadcrumb-item active">課題詳細</li>
+        </ol>
+      </nav>
+      <button class="btn btn-sm btn-outline-danger" id="delete-issue-btn">
+        <i class="bi bi-trash3 me-1"></i>削除
+      </button>
+    </div>
+
+    <div class="page-content">
+      <div id="error-container" style="display:none" class="mb-3"></div>
+
+      <div class="row g-4">
+        <!-- 左：本文＋コメント -->
+        <div class="col-lg-8">
+
+          <!-- タイトル・詳細カード -->
+          <div class="card mb-4">
+            <div class="card-body">
+              <!-- タイトル -->
+              <div class="d-flex align-items-start gap-2 mb-3">
+                <div id="title-display" style="flex:1">
+                  <h4 class="issue-detail-title" id="issue-title-text">読み込み中...</h4>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary flex-shrink-0" id="edit-title-btn">
+                  <i class="bi bi-pencil"></i>
+                </button>
+              </div>
+              <div id="title-edit" style="display:none" class="mb-3">
+                <input type="text" id="title-input" class="form-control mb-2">
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-primary" id="save-title-btn">保存</button>
+                  <button class="btn btn-sm btn-secondary" id="cancel-title-btn">キャンセル</button>
+                </div>
+              </div>
+
+              <!-- 詳細 -->
+              <div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="fw-semibold" style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px">詳細</span>
+                  <button class="btn btn-sm btn-outline-secondary" id="edit-desc-btn" style="font-size:12px;padding:2px 8px">
+                    <i class="bi bi-pencil me-1"></i>編集
+                  </button>
+                </div>
+                <div id="desc-display" class="p-3 rounded"
+                     style="background:#F8F9FA;min-height:80px;font-size:13.5px;line-height:1.65;white-space:pre-wrap">
+                  -
+                </div>
+                <div id="desc-edit" style="display:none">
+                  <textarea id="desc-input" class="form-control mb-2" rows="7"></textarea>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-primary" id="save-desc-btn">保存</button>
+                    <button class="btn btn-sm btn-secondary" id="cancel-desc-btn">キャンセル</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- コメントカード -->
+          <div class="card">
+            <div class="card-header">
+              <i class="bi bi-chat-dots me-2"></i>コメント
+            </div>
+            <div class="card-body">
+              <div id="comments-list">
+                <div class="text-center text-muted py-3" style="font-size:14px">読み込み中...</div>
+              </div>
+              <hr class="my-3">
+              <label class="form-label fw-semibold" style="font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)">コメントを追加</label>
+              <textarea id="comment-input" class="form-control mb-2" rows="3" placeholder="コメントを入力..."></textarea>
+              <button class="btn btn-primary btn-sm" id="add-comment-btn">
+                <i class="bi bi-send me-1"></i>送信
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 右：メタ情報パネル -->
+        <div class="col-lg-4">
+          <div class="issue-meta-panel">
+            <div class="issue-meta-item">
+              <div class="issue-meta-label">ステータス</div>
+              <select id="meta-status" class="form-select form-select-sm">
+                <option value="open">未対応</option>
+                <option value="in_progress">処理中</option>
+                <option value="resolved">処理済み</option>
+                <option value="closed">完了</option>
+              </select>
+            </div>
+            <div class="issue-meta-item">
+              <div class="issue-meta-label">優先度</div>
+              <select id="meta-priority" class="form-select form-select-sm">
+                <option value="urgent">緊急</option>
+                <option value="high">高</option>
+                <option value="medium">中</option>
+                <option value="low">低</option>
+              </select>
+            </div>
+            <div class="issue-meta-item">
+              <div class="issue-meta-label">担当者</div>
+              <select id="meta-assignee" class="form-select form-select-sm">
+                <option value="">担当者なし</option>
+              </select>
+            </div>
+            <div class="issue-meta-item">
+              <div class="issue-meta-label">開始日</div>
+              <input type="date" id="meta-start-date" class="form-control form-control-sm">
+            </div>
+            <div class="issue-meta-item">
+              <div class="issue-meta-label">期限日</div>
+              <input type="date" id="meta-due-date" class="form-control form-control-sm">
+            </div>
+            <button class="btn btn-primary btn-sm w-100 mt-1" id="save-meta-btn">
+              <i class="bi bi-check2 me-1"></i>変更を保存
+            </button>
+
+            <hr class="my-3">
+
+            <div class="issue-meta-item">
+              <div class="issue-meta-label">報告者</div>
+              <div class="issue-meta-value" id="meta-reporter">-</div>
+            </div>
+            <div class="issue-meta-item">
+              <div class="issue-meta-label">登録日</div>
+              <div class="issue-meta-value" id="meta-created">-</div>
+            </div>
+            <div class="issue-meta-item">
+              <div class="issue-meta-label">最終更新</div>
+              <div class="issue-meta-value" id="meta-updated">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/issue.js"></script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>課題一覧 - WorkBoard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+  <!-- サイドバー -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <a href="/dashboard.html">
+        <div class="logo-icon"><i class="bi bi-kanban-fill"></i></div>
+        WorkBoard
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">メニュー</div>
+      <a href="/dashboard.html" class="sidebar-link">
+        <i class="bi bi-grid-fill"></i> ダッシュボード
+      </a>
+    </div>
+    <div class="sidebar-section" style="flex:1">
+      <div class="sidebar-label">プロジェクト</div>
+      <div id="sidebar-projects"></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-avatar" id="user-avatar-sidebar">--</div>
+      <div class="user-info">
+        <div class="user-name" id="user-name-sidebar">-</div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="ログアウト">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- メインコンテンツ -->
+  <div class="main-content">
+    <div class="top-header">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/dashboard.html">ダッシュボード</a></li>
+          <li class="breadcrumb-item active" id="breadcrumb-project">-</li>
+        </ol>
+      </nav>
+      <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createIssueModal">
+        <i class="bi bi-plus-lg me-1"></i>課題を追加
+      </button>
+    </div>
+
+    <div class="page-content">
+      <div id="error-container" style="display:none" class="mb-3"></div>
+
+      <!-- プロジェクトヘッダー -->
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="mb-1 fw-bold" id="project-name">読み込み中...</h5>
+              <p class="mb-0 text-muted" style="font-size:13.5px" id="project-desc"></p>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProjectModal">
+              <i class="bi bi-pencil me-1"></i>編集
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- フィルター -->
+      <div class="filter-bar mb-3">
+        <input type="text" id="search-input" class="form-control" style="width:200px" placeholder="課題を検索...">
+        <select id="filter-status" class="form-select" style="width:130px">
+          <option value="">ステータス：全て</option>
+          <option value="open">未対応</option>
+          <option value="in_progress">処理中</option>
+          <option value="resolved">処理済み</option>
+          <option value="closed">完了</option>
+        </select>
+        <select id="filter-priority" class="form-select" style="width:120px">
+          <option value="">優先度：全て</option>
+          <option value="urgent">緊急</option>
+          <option value="high">高</option>
+          <option value="medium">中</option>
+          <option value="low">低</option>
+        </select>
+        <select id="filter-assignee" class="form-select" style="width:140px">
+          <option value="">担当者：全て</option>
+        </select>
+        <button class="btn btn-sm btn-outline-secondary" id="clear-filters">リセット</button>
+      </div>
+
+      <!-- 課題テーブル -->
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="issue-table">
+              <thead>
+                <tr>
+                  <th style="width:38%">タイトル</th>
+                  <th>ステータス</th>
+                  <th>優先度</th>
+                  <th>担当者</th>
+                  <th>期限日</th>
+                  <th>登録日</th>
+                </tr>
+              </thead>
+              <tbody id="issues-tbody">
+                <tr><td colspan="6" class="text-center py-4 text-muted">読み込み中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="mt-2 text-muted" style="font-size:12px" id="issue-count"></div>
+    </div>
+  </div>
+
+  <!-- 課題作成モーダル -->
+  <div class="modal fade" id="createIssueModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">課題を追加</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="modal-error" style="display:none" class="mb-3"></div>
+          <div class="mb-3">
+            <label class="form-label">タイトル <span class="text-danger">*</span></label>
+            <input type="text" id="issue-title" class="form-control" placeholder="課題のタイトルを入力">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">詳細</label>
+            <textarea id="issue-desc" class="form-control" rows="4" placeholder="課題の詳細を入力"></textarea>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">ステータス</label>
+              <select id="issue-status" class="form-select">
+                <option value="open">未対応</option>
+                <option value="in_progress">処理中</option>
+                <option value="resolved">処理済み</option>
+                <option value="closed">完了</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">優先度</label>
+              <select id="issue-priority" class="form-select">
+                <option value="urgent">緊急</option>
+                <option value="high">高</option>
+                <option value="medium" selected>中</option>
+                <option value="low">低</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">担当者</label>
+              <select id="issue-assignee" class="form-select">
+                <option value="">担当者なし</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">期限日</label>
+              <input type="date" id="issue-due-date" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">開始日</label>
+              <input type="date" id="issue-start-date" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+          <button type="button" class="btn btn-primary" id="create-issue-btn">追加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- プロジェクト編集モーダル -->
+  <div class="modal fade" id="editProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">プロジェクトを編集</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">プロジェクト名 <span class="text-danger">*</span></label>
+            <input type="text" id="edit-project-name" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">説明</label>
+            <textarea id="edit-project-desc" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+          <button type="button" class="btn btn-primary" id="update-project-btn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/project.js"></script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+/* ===== 変数 ===== */
+:root {
+  --primary:       #1F6FEB;
+  --primary-dark:  #1558C0;
+  --sidebar-bg:    #1C2B4A;
+  --sidebar-text:  #C9D6E3;
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-active-bg: rgba(31, 111, 235, 0.25);
+  --bg:            #F4F6F9;
+  --border:        #E1E4E8;
+  --text:          #2D3436;
+  --text-muted:    #6C757D;
+  --sidebar-width: 240px;
+}
+
+* { box-sizing: border-box; }
+body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+
+/* ===== サイドバー ===== */
+.sidebar {
+  position: fixed; top: 0; left: 0;
+  width: var(--sidebar-width); height: 100vh;
+  background: var(--sidebar-bg);
+  display: flex; flex-direction: column;
+  z-index: 100; overflow-y: auto;
+}
+
+.sidebar-logo { padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar-logo a { text-decoration: none; color: #fff; font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.logo-icon { width: 30px; height: 30px; background: var(--primary); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+
+.sidebar-section { padding: 6px 0; }
+.sidebar-label { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: rgba(201,214,227,0.45); padding: 14px 16px 4px; text-transform: uppercase; }
+
+.sidebar-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; color: var(--sidebar-text); text-decoration: none; font-size: 13.5px;
+  transition: background 0.12s;
+}
+.sidebar-link:hover { background: var(--sidebar-hover); color: #fff; }
+.sidebar-link.active { background: var(--sidebar-active-bg); color: #fff; border-left: 3px solid var(--primary); padding-left: 13px; }
+.sidebar-link i { width: 17px; text-align: center; font-size: 14px; flex-shrink: 0; }
+
+.sidebar-footer {
+  margin-top: auto; padding: 12px 14px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex; align-items: center; gap: 10px;
+}
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 13px; flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logout-btn { color: var(--sidebar-text); font-size: 15px; cursor: pointer; background: none; border: none; padding: 4px; line-height: 1; }
+.logout-btn:hover { color: #fff; }
+
+/* ===== メインコンテンツ ===== */
+.main-content { margin-left: var(--sidebar-width); min-height: 100vh; }
+
+.top-header {
+  background: #fff; border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 54px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.breadcrumb { margin: 0; font-size: 13.5px; }
+.breadcrumb-item a { color: var(--primary); text-decoration: none; }
+.breadcrumb-item a:hover { text-decoration: underline; }
+
+.page-content { padding: 22px 24px; }
+
+/* ===== カード ===== */
+.card { border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.card-header { padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 14.5px; background: none; display: flex; align-items: center; }
+.card-body { padding: 18px; }
+
+/* ===== 統計カード ===== */
+.stat-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 18px; text-align: center; }
+.stat-number { font-size: 30px; font-weight: 700; color: var(--primary); margin: 0; line-height: 1; }
+.stat-label { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+/* ===== プロジェクトカード ===== */
+.project-card {
+  display: block; text-decoration: none; color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; background: #fff;
+  padding: 18px; transition: box-shadow 0.15s, border-color 0.15s; height: 100%;
+}
+.project-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.09); border-color: var(--primary); color: var(--text); }
+.project-card-name { font-size: 15px; font-weight: 600; color: var(--primary); margin-bottom: 7px; }
+.project-card-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.project-card-meta { font-size: 12px; color: var(--text-muted); display: flex; gap: 14px; }
+
+/* ===== 課題テーブル ===== */
+.issue-table { width: 100%; border-collapse: collapse; }
+.issue-table th { background: #F8F9FA; border-bottom: 2px solid var(--border); padding: 9px 12px; font-size: 12px; font-weight: 600; color: var(--text-muted); text-align: left; white-space: nowrap; }
+.issue-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 13.5px; vertical-align: middle; }
+.issue-table tr:last-child td { border-bottom: none; }
+.issue-table tr:hover td { background: #F8FAFE; }
+.issue-title-link { color: var(--text); text-decoration: none; font-weight: 500; }
+.issue-title-link:hover { color: var(--primary); }
+
+/* ===== バッジ ===== */
+.badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; line-height: 1.4; }
+.badge-status-open        { background: #EAECEF; color: #5F6368; }
+.badge-status-in-progress { background: #E3F2FD; color: #1565C0; }
+.badge-status-resolved    { background: #FFF3E0; color: #E65100; }
+.badge-status-closed      { background: #E8F5E9; color: #2E7D32; }
+.badge-priority-urgent    { background: #FFEBEE; color: #C62828; }
+.badge-priority-high      { background: #FFF3E0; color: #E65100; }
+.badge-priority-medium    { background: #E3F2FD; color: #1565C0; }
+.badge-priority-low       { background: #F3E5F5; color: #6A1B9A; }
+
+/* ===== フォーム ===== */
+.form-label { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.form-control, .form-select { font-size: 13.5px; border: 1px solid var(--border); border-radius: 6px; }
+.form-control:focus, .form-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(31,111,235,0.14); }
+
+/* ===== ボタン ===== */
+.btn-primary { background: var(--primary); border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+
+/* ===== フィルターバー ===== */
+.filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.filter-bar .form-control,
+.filter-bar .form-select { font-size: 13px; padding: 5px 10px; height: 34px; }
+
+/* ===== コメント ===== */
+.comment-item { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.comment-item:last-child { border-bottom: none; }
+.comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.comment-author { font-weight: 600; font-size: 13.5px; }
+.comment-date { font-size: 12px; color: var(--text-muted); }
+.comment-content { font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; }
+
+/* ===== 課題詳細 ===== */
+.issue-detail-title { font-size: 21px; font-weight: 700; line-height: 1.3; margin: 0; }
+.issue-meta-panel { background: #F8F9FA; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.issue-meta-item { margin-bottom: 14px; }
+.issue-meta-item:last-child { margin-bottom: 0; }
+.issue-meta-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; }
+.issue-meta-value { font-size: 13.5px; }
+
+/* ===== ログイン画面 ===== */
+.login-page { min-height: 100vh; background: linear-gradient(135deg, #1C2B4A 0%, #1F6FEB 100%); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.login-card { background: #fff; border-radius: 12px; padding: 40px 36px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+.login-logo { text-align: center; margin-bottom: 30px; }
+.login-logo-icon { width: 54px; height: 54px; background: var(--primary); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 24px; color: #fff; }
+.login-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; }
+.login-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+/* ===== ユーティリティ ===== */
+.empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+.empty-state i { font-size: 44px; margin-bottom: 12px; display: block; opacity: 0.25; }
+.empty-state p { font-size: 14px; margin: 0; }
