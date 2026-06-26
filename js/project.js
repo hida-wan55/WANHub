@@ -35,7 +35,7 @@ async function loadProject() {
 
   if (error || !data) { window.location.href = '/dashboard.html'; return; }
 
-  document.title = `${data.name} - WorkBoard`;
+  document.title = `${data.name} - WANHub`;
   document.getElementById('project-name').textContent = data.name;
   document.getElementById('project-desc').textContent = data.description || '';
   document.getElementById('breadcrumb-project').textContent = data.name;
@@ -53,7 +53,7 @@ async function loadProject() {
       document.getElementById('project-name').textContent = name;
       document.getElementById('project-desc').textContent = document.getElementById('edit-project-desc').value.trim();
       document.getElementById('breadcrumb-project').textContent = name;
-      document.title = `${name} - WorkBoard`;
+      document.title = `${name} - WANHub`;
       bootstrap.Modal.getInstance(document.getElementById('editProjectModal')).hide();
     }
   });

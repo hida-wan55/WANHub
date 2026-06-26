@@ -43,7 +43,7 @@ async function loadIssue() {
   if (error || !data) { window.location.href = '/dashboard.html'; return; }
 
   issue = data;
-  document.title = `${data.title} - WorkBoard`;
+  document.title = `${data.title} - WANHub`;
 
   const projLink = document.getElementById('breadcrumb-project');
   projLink.textContent = data.project?.name || '-';
@@ -151,7 +151,7 @@ function setupTitleEdit() {
     const { error } = await supabaseClient.from('issues').update({ title }).eq('id', issueId);
     if (!error) {
       document.getElementById('issue-title-text').textContent = title;
-      document.title = `${title} - WorkBoard`;
+      document.title = `${title} - WANHub`;
       issue.title = title;
       titleDisplay.style.display = 'block';
       titleEdit.style.display    = 'none';
