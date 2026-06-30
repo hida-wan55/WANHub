@@ -88,6 +88,15 @@ function formatDate(dateStr) {
   return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// ユーザーが自分でパスワードを変更する際のバリデーション（管理者作成時より厳格）
+function validateUserPassword(pw) {
+  if (pw.length < 12)        return 'パスワードは12文字以上で設定してください';
+  if (!/[A-Z]/.test(pw))    return '大文字（A〜Z）を1文字以上含めてください';
+  if (!/[a-z]/.test(pw))    return '小文字（a〜z）を1文字以上含めてください';
+  if (!/[0-9]/.test(pw))    return '数字（0〜9）を1文字以上含めてください';
+  return null;
+}
+
 // HTMLエスケープ（XSS対策）
 function escapeHtml(str) {
   return String(str || '')
@@ -192,7 +201,7 @@ async function setupProfileModal(profile) {
         <div id="profile-pw-error" class="alert alert-danger py-1 mb-2"
              style="display:none;font-size:13px"></div>
         <input type="password" id="profile-new-password" class="form-control form-control-sm mb-2"
-               placeholder="新しいパスワード（6文字以上）" autocomplete="new-password">
+               placeholder="新しいパスワード（12文字以上・大文字小文字数字を含む）" autocomplete="new-password">
         <input type="password" id="profile-confirm-password" class="form-control form-control-sm"
                placeholder="確認のためもう一度入力" autocomplete="new-password">
       `;
@@ -546,8 +555,9 @@ async function saveProfileChanges(profile) {
 
   // ---- パスワードの更新 ----
   if (newPw) {
-    if (newPw.length < 6) {
-      if (pwErrEl) { pwErrEl.textContent = 'パスワードは6文字以上で設定してください'; pwErrEl.style.display = 'block'; }
+    const pwError = validateUserPassword(newPw);
+    if (pwError) {
+      if (pwErrEl) { pwErrEl.textContent = pwError; pwErrEl.style.display = 'block'; }
       return;
     }
     if (newPw !== confirmPw) {
