@@ -101,8 +101,8 @@ async function init() {
 
   await loadStatuses();
 
-  // profiles と labels は loadComments/ラベル表示より先に取得
-  await Promise.all([loadProfiles(), loadAllLabels()]);
+  // labels は早めに取得、profiles は loadIssue 後（project.id が必要）
+  await loadAllLabels();
 
   // コメント未読判定のため、既読マーク前に前回の閲覧時刻を取得
   if (currentProfile) {
@@ -112,9 +112,10 @@ async function init() {
     prevReadAt = readData?.read_at || null;
   }
 
-  // loadIssue を先に実行（issue.project.id が loadComments/loadProjectMembers で必要）
+  // loadIssue を先に実行（issue.project.id が loadProfiles/loadComments/loadProjectMembers で必要）
   await loadIssue();
   await Promise.all([
+    loadProfiles(),
     loadSidebarProjects(),
     loadComments(),
     loadAttachments(),
