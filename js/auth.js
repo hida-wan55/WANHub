@@ -556,7 +556,8 @@ async function saveProfileChanges(profile) {
     }
     const { error } = await supabaseClient.auth.updateUser({ password: newPw });
     if (error) {
-      if (pwErrEl) { pwErrEl.textContent = '変更に失敗しました: ' + error.message; pwErrEl.style.display = 'block'; }
+      console.error('[updateUser]', error.message);
+      if (pwErrEl) { pwErrEl.textContent = 'パスワードの変更に失敗しました。'; pwErrEl.style.display = 'block'; }
       return;
     }
     changed = true;

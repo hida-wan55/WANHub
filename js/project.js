@@ -471,7 +471,7 @@ async function saveMemberChanges() {
   if (toAdd.length > 0) {
     const { error } = await supabaseClient.from('project_members')
       .insert(toAdd.map(user_id => ({ project_id: projectId, user_id })));
-    if (error) { alert('追加に失敗しました: ' + error.message); btn.disabled = false; btn.textContent = '保存'; return; }
+    if (error) { console.error('[project_members insert]', error.message); alert('メンバーの保存に失敗しました。'); btn.disabled = false; btn.textContent = '保存'; return; }
   }
 
   for (const userId of toRemove) {

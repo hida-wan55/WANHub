@@ -125,7 +125,8 @@ async function loadMembers() {
         target_user_id: btn.dataset.memberId,
       });
       if (error) {
-        alert('削除に失敗しました: ' + error.message);
+        console.error('[admin_delete_user]', error.message);
+        alert('ユーザーの削除に失敗しました。');
         btn.disabled = false;
       } else {
         document.getElementById(`member-row-${btn.dataset.memberId}`)?.remove();
@@ -213,7 +214,8 @@ async function loadProjectsAdmin() {
         target_project_id: btn.dataset.projectId,
       });
       if (error) {
-        alert('削除に失敗しました: ' + error.message);
+        console.error('[admin_delete_project]', error.message);
+        alert('プロジェクトの削除に失敗しました。');
         btn.disabled = false;
       } else {
         await loadProjectsAdmin();

@@ -298,7 +298,8 @@ async function loadComments() {
   const el = document.getElementById('comments-list');
   if (error) {
     console.error('[loadComments] Supabase error:', error);
-    el.innerHTML = `<p class="text-danger" style="font-size:13.5px">読み込み失敗 (${error.code || '?'}: ${error.message || '不明なエラー'})</p>`;
+    console.error('[loadComments] code:', error.code, error.message);
+    el.innerHTML = `<p class="text-danger" style="font-size:13.5px">コメントの読み込みに失敗しました。ページを再読み込みしてください。</p>`;
     return;
   }
 
@@ -502,8 +503,28 @@ async function loadAttachments() {
   });
 }
 
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg','image/png','image/gif','image/webp','image/svg+xml',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain','text/csv',
+  'application/zip','application/x-zip-compressed',
+]);
+
 async function uploadFiles(files) {
   const MAX_SIZE = 10 * 1024 * 1024;
+
+  const invalid = Array.from(files).filter(f => !ALLOWED_MIME_TYPES.has(f.type));
+  if (invalid.length > 0) {
+    showError(`アップロードできないファイル形式です：${invalid.map(f => f.name).join(', ')}`);
+    return;
+  }
+
   const oversized = Array.from(files).filter(f => f.size > MAX_SIZE);
   if (oversized.length > 0) {
     showError(`10MB以上のファイルはアップロードできません：${oversized.map(f=>f.name).join(', ')}`);
