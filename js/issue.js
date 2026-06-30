@@ -378,7 +378,7 @@ async function loadComments() {
     const iconsHtml = projectMembers.map(p => {
       const hasRead      = c.user?.id === p.id                             // 投稿者本人は自動既読
                         || (readMap[p.id] && c.created_at <= readMap[p.id]); // ページ訪問済み
-      const hasConfirmed = confirmedSet.has(p.id);                          // 確認ボタン押した
+      const hasConfirmed = confirmedSet.has(p.id) || c.user?.id === p.id;   // 確認ボタン押した or 投稿者本人
       const cls = hasConfirmed ? 'confirmed' : hasRead ? 'read' : '';
       const tip = hasConfirmed ? `${escapeHtml(p.name)}（確認済み）`
                 : hasRead      ? `${escapeHtml(p.name)}（既読）`
