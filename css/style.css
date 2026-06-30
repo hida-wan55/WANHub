@@ -679,8 +679,8 @@ body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo
   cursor: default;
   display: inline-block;
 }
-.confirm-icon-wrap.read      { opacity: 0.7; }   /* 既読：やや濃く */
-.confirm-icon-wrap.confirmed { opacity: 1; }      /* 確認済み：最大 + チェック */
+.confirm-icon-wrap.read      { opacity: 1; }      /* 既読：最大濃度 */
+.confirm-icon-wrap.confirmed { opacity: 1; }      /* 確認済み：最大濃度 + チェック */
 .confirm-check-badge {
   position: absolute;
   bottom: -2px; right: -2px;
