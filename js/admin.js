@@ -46,7 +46,9 @@ async function loadMembers() {
       ? `<span class="badge" style="font-size:10px;background:rgba(214,158,46,0.18);color:#B45309;border:1px solid rgba(214,158,46,0.35)"><i class="bi bi-shield-fill me-1"></i>オーナー</span>`
       : roleName === 'admin'
         ? `<span class="badge" style="font-size:10px;background:rgba(31,111,235,0.14);color:var(--primary);border:1px solid rgba(31,111,235,0.3)"><i class="bi bi-gear-fill me-1"></i>管理者</span>`
-        : `<span class="badge bg-light text-muted border" style="font-size:10px">メンバー</span>`;
+        : roleName === 'guest'
+          ? `<span class="badge" style="font-size:10px;background:rgba(108,117,125,0.14);color:#6C757D;border:1px solid rgba(108,117,125,0.3)"><i class="bi bi-eye me-1"></i>ゲスト</span>`
+          : `<span class="badge bg-light text-muted border" style="font-size:10px">メンバー</span>`;
 
     // 削除ボタンはオーナーのみ表示、かつ自分自身は無効
     const deleteBtn = myRole === 'owner'
@@ -100,9 +102,14 @@ async function loadMembers() {
           // オーナーのメンバー編集はオーナーのみ選択可
           roleSelect.innerHTML = `<option value="owner">オーナー — 全権限</option>`;
         } else {
+          // オーナーはゲスト設定可、管理者はゲスト設定不可
+          const guestOption = myRole === 'owner'
+            ? `<option value="guest">ゲスト — 閲覧のみ（オーナーのみ設定可）</option>`
+            : '';
           roleSelect.innerHTML = `
             <option value="admin">管理者 — PJ削除・ステータス・ラベル管理</option>
             <option value="member">メンバー — 通常利用のみ</option>
+            ${guestOption}
           `;
         }
         roleSelect.value = targetRole || 'member';
@@ -148,7 +155,7 @@ function setupSaveMember() {
     const myRole = currentProfile?.role || (currentProfile?.is_admin ? 'admin' : 'member');
     // 権限変更はオーナーのみ
     const updateData = myRole === 'owner'
-      ? { name, role, is_admin: role !== 'member' }
+      ? { name, role, is_admin: role === 'admin' }
       : { name };
 
     const { error } = await supabaseClient.from('profiles')

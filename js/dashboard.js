@@ -13,6 +13,7 @@ async function init() {
   if (!session) return;
 
   currentProfile = await getCurrentProfile();
+  applyGuestMode(currentProfile);
   if (currentProfile) {
     applyTheme(currentProfile.theme_color);
     document.getElementById('user-name-sidebar').textContent = currentProfile.name;
@@ -21,7 +22,10 @@ async function init() {
 
     if (isCurrentUserAdmin()) {
       document.getElementById('admin-btn').style.display      = 'inline-block';
-      document.getElementById('new-project-btn').style.display = 'inline-block';
+      // ゲストにはPJ作成ボタンを表示しない
+      if (currentProfile.role !== 'guest') {
+        document.getElementById('new-project-btn').style.display = 'inline-block';
+      }
       myProjectIds = null; // 全PJ表示
     } else {
       // 参加しているPJのIDを取得

@@ -88,6 +88,13 @@ function formatDate(dateStr) {
   return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// ゲストモード適用（body.guest-mode クラスを付与して CSS で制御）
+function applyGuestMode(profile) {
+  if (profile?.role === 'guest') {
+    document.body.classList.add('guest-mode');
+  }
+}
+
 // ユーザーが自分でパスワードを変更する際のバリデーション（管理者作成時より厳格）
 function validateUserPassword(pw) {
   if (pw.length < 12)        return 'パスワードは12文字以上で設定してください';

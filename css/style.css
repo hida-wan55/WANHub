@@ -710,3 +710,14 @@ body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* ===== ゲストモード ===== */
+body.guest-mode .guest-hidden { display: none !important; }
+body.guest-mode .guest-readonly select,
+body.guest-mode .guest-readonly input,
+body.guest-mode .guest-readonly textarea {
+  pointer-events: none;
+  background: var(--bg) !important;
+  color: var(--text-muted);
+}
+body.guest-mode .guest-readonly .form-select { background-image: none; }

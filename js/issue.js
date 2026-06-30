@@ -90,6 +90,15 @@ async function init() {
   if (!issueId) { window.location.href = '/dashboard.html'; return; }
 
   currentProfile = await getCurrentProfile();
+  applyGuestMode(currentProfile);
+  if (currentProfile?.role === 'guest') {
+    // サイドバーのメタフィールドを読み取り専用に
+    document.querySelector('.issue-meta-panel')?.classList.add('guest-readonly');
+    // コメント・送信エリアを非表示
+    document.getElementById('add-comment-btn')?.closest('.card')?.style.setProperty('display', 'none');
+    // ファイルアップロードボタンを非表示
+    document.querySelector('label[for="file-input"]')?.style.setProperty('display', 'none');
+  }
   if (currentProfile) {
     applyTheme(currentProfile.theme_color);
     document.getElementById('user-name-sidebar').textContent = currentProfile.name;

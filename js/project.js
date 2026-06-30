@@ -25,6 +25,7 @@ async function init() {
   if (!projectId) { window.location.href = '/dashboard.html'; return; }
 
   currentProfile = await getCurrentProfile();
+  applyGuestMode(currentProfile);
   if (currentProfile) {
     applyTheme(currentProfile.theme_color);
     document.getElementById('user-name-sidebar').textContent = currentProfile.name;
