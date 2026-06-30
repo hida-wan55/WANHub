@@ -353,7 +353,6 @@ async function loadComments() {
     const isNew = prevReadAt && c.created_at > prevReadAt && c.user?.id !== currentProfile?.id;
     const confirmedSet = confirmMap[c.id] || new Set();
     const myConfirmed  = confirmedSet.has(currentProfile?.id) || c.user?.id === currentProfile?.id;
-    if (c.user?.id === currentProfile?.id) console.log('[自分のコメント]', c.id, 'user:', c.user?.id, 'me:', currentProfile?.id, 'myConfirmed:', myConfirmed);
 
     // 変更ログ
     let activityHtml = '';
