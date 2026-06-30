@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ボード - WANHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <a href="/dashboard.html">
+        <div class="logo-icon"><i class="bi bi-kanban-fill"></i></div>
+        WANHub
+      </a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">メニュー</div>
+      <a href="/dashboard.html" class="sidebar-link"><i class="bi bi-grid-fill"></i> ダッシュボード</a>
+    </div>
+    <div class="sidebar-section" style="flex:1">
+      <div class="sidebar-label">プロジェクト</div>
+      <div id="sidebar-projects"></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-avatar" id="user-avatar-sidebar" style="cursor:pointer" data-bs-toggle="modal" data-bs-target="#profileModal">--</div>
+      <div class="user-info" style="cursor:pointer" data-bs-toggle="modal" data-bs-target="#profileModal">
+        <div class="user-name" id="user-name-sidebar">-</div>
+        <div style="font-size:10px;color:rgba(201,214,227,0.45)">プロフィール設定</div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="ログアウト">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="top-header">
+      <div class="d-flex align-items-center gap-3">
+        <a href="#" id="back-btn" class="back-btn">
+          <i class="bi bi-arrow-left"></i> 戻る
+        </a>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/dashboard.html">ダッシュボード</a></li>
+            <li class="breadcrumb-item"><a href="#" id="breadcrumb-project">-</a></li>
+            <li class="breadcrumb-item active">ボード</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+
+    <div class="page-content" style="display:flex;flex-direction:column;height:calc(100vh - 54px);overflow:hidden;padding-bottom:0">
+      <div id="error-container" style="display:none" class="mb-3"></div>
+
+      <!-- ビュー切替タブ -->
+      <div class="view-tabs">
+        <a href="#" id="tab-list"  class="view-tab"><i class="bi bi-list-ul me-1"></i>リスト</a>
+        <a href="#" id="tab-board" class="view-tab active"><i class="bi bi-kanban me-1"></i>ボード</a>
+        <a href="#" id="tab-wiki"  class="view-tab"><i class="bi bi-journal-text me-1"></i>Wiki</a>
+        <a href="#" id="tab-gantt" class="view-tab"><i class="bi bi-bar-chart-steps me-1"></i>ガント</a>
+      </div>
+
+      <!-- フィルターバー -->
+      <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+        <select id="filter-assignee" class="form-select form-select-sm" style="width:140px">
+          <option value="">担当者：全て</option>
+        </select>
+        <select id="filter-priority" class="form-select form-select-sm" style="width:120px">
+          <option value="">優先度：全て</option>
+          <option value="urgent">緊急</option>
+          <option value="high">高</option>
+          <option value="medium">中</option>
+          <option value="low">低</option>
+        </select>
+        <button class="btn btn-sm btn-outline-secondary" id="clear-filters">リセット</button>
+        <span id="board-issue-count" class="ms-auto text-muted" style="font-size:12px"></span>
+      </div>
+
+      <!-- ボードエリア（横スクロール） -->
+      <div class="board-container" id="board-container">
+        <div class="text-muted py-4 px-3" style="font-size:13.5px">読み込み中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- プロフィール設定モーダル -->
+  <div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>プロフィール設定</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-4">
+            <div id="profile-avatar-preview"
+                 style="width:80px;height:80px;margin:0 auto 12px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:32px;color:white;overflow:hidden"></div>
+            <label class="btn btn-sm btn-outline-secondary" for="avatar-file-input" style="cursor:pointer">
+              <i class="bi bi-camera me-1"></i>画像を変更
+              <input type="file" id="avatar-file-input" style="display:none" accept="image/*">
+            </label>
+          </div>
+          <div>
+            <label class="form-label fw-semibold" style="font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)">テーマカラー</label>
+            <div class="d-flex gap-2 flex-wrap mt-1" id="theme-color-picker"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/board.js"></script>
+</body>
+</html>

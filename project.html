@@ -10,7 +10,6 @@
 </head>
 <body>
 
-  <!-- サイドバー -->
   <div class="sidebar">
     <div class="sidebar-logo">
       <a href="/dashboard.html">
@@ -20,18 +19,17 @@
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">メニュー</div>
-      <a href="/dashboard.html" class="sidebar-link">
-        <i class="bi bi-grid-fill"></i> ダッシュボード
-      </a>
+      <a href="/dashboard.html" class="sidebar-link"><i class="bi bi-grid-fill"></i> ダッシュボード</a>
     </div>
     <div class="sidebar-section" style="flex:1">
       <div class="sidebar-label">プロジェクト</div>
       <div id="sidebar-projects"></div>
     </div>
     <div class="sidebar-footer">
-      <div class="user-avatar" id="user-avatar-sidebar">--</div>
-      <div class="user-info">
+      <div class="user-avatar" id="user-avatar-sidebar" style="cursor:pointer" data-bs-toggle="modal" data-bs-target="#profileModal">--</div>
+      <div class="user-info" style="cursor:pointer" data-bs-toggle="modal" data-bs-target="#profileModal">
         <div class="user-name" id="user-name-sidebar">-</div>
+        <div style="font-size:10px;color:rgba(201,214,227,0.45)">プロフィール設定</div>
       </div>
       <button class="logout-btn" onclick="logout()" title="ログアウト">
         <i class="bi bi-box-arrow-right"></i>
@@ -39,15 +37,19 @@
     </div>
   </div>
 
-  <!-- メインコンテンツ -->
   <div class="main-content">
     <div class="top-header">
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="/dashboard.html">ダッシュボード</a></li>
-          <li class="breadcrumb-item active" id="breadcrumb-project">-</li>
-        </ol>
-      </nav>
+      <div class="d-flex align-items-center gap-3">
+        <a href="/dashboard.html" class="back-btn">
+          <i class="bi bi-arrow-left"></i> 戻る
+        </a>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/dashboard.html">ダッシュボード</a></li>
+            <li class="breadcrumb-item active" id="breadcrumb-project">-</li>
+          </ol>
+        </nav>
+      </div>
       <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createIssueModal">
         <i class="bi bi-plus-lg me-1"></i>課題を追加
       </button>
@@ -56,30 +58,41 @@
     <div class="page-content">
       <div id="error-container" style="display:none" class="mb-3"></div>
 
-      <!-- プロジェクトヘッダー -->
       <div class="card mb-3">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-start">
             <div>
-              <h5 class="mb-1 fw-bold" id="project-name">読み込み中...</h5>
-              <p class="mb-0 text-muted" style="font-size:13.5px" id="project-desc"></p>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <h5 class="mb-0 fw-bold" id="project-name">読み込み中...</h5>
+                <span id="project-code-display" style="font-size:12px;color:var(--text-muted);font-weight:500"></span>
+              </div>
+              <p class="mb-1 text-muted" style="font-size:13.5px" id="project-desc"></p>
+              <div id="project-members-display" class="d-flex align-items-center gap-1 flex-wrap mt-1"></div>
             </div>
-            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProjectModal">
-              <i class="bi bi-pencil me-1"></i>編集
-            </button>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary" id="manage-members-btn" style="display:none">
+                <i class="bi bi-people me-1"></i>メンバー
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProjectModal">
+                <i class="bi bi-pencil me-1"></i>編集
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- フィルター -->
+      <!-- ビュー切替タブ -->
+      <div class="view-tabs">
+        <a href="#" id="tab-list"  class="view-tab active"><i class="bi bi-list-ul me-1"></i>リスト</a>
+        <a href="#" id="tab-board" class="view-tab"><i class="bi bi-kanban me-1"></i>ボード</a>
+        <a href="#" id="tab-wiki"  class="view-tab"><i class="bi bi-journal-text me-1"></i>Wiki</a>
+        <a href="#" id="tab-gantt" class="view-tab"><i class="bi bi-bar-chart-steps me-1"></i>ガント</a>
+      </div>
+
       <div class="filter-bar mb-3">
         <input type="text" id="search-input" class="form-control" style="width:200px" placeholder="課題を検索...">
         <select id="filter-status" class="form-select" style="width:130px">
           <option value="">ステータス：全て</option>
-          <option value="open">未対応</option>
-          <option value="in_progress">処理中</option>
-          <option value="resolved">処理済み</option>
-          <option value="closed">完了</option>
         </select>
         <select id="filter-priority" class="form-select" style="width:120px">
           <option value="">優先度：全て</option>
@@ -91,26 +104,34 @@
         <select id="filter-assignee" class="form-select" style="width:140px">
           <option value="">担当者：全て</option>
         </select>
+        <select id="filter-label" class="form-select" style="width:130px">
+          <option value="">ラベル：全て</option>
+        </select>
+        <select id="filter-overdue" class="form-select" style="width:120px">
+          <option value="">期限：全て</option>
+          <option value="overdue">期限切れのみ</option>
+        </select>
         <button class="btn btn-sm btn-outline-secondary" id="clear-filters">リセット</button>
       </div>
 
-      <!-- 課題テーブル -->
       <div class="card">
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="issue-table">
               <thead>
                 <tr>
-                  <th style="width:38%">タイトル</th>
+                  <th style="width:70px">番号</th>
+                  <th style="width:34%">タイトル</th>
                   <th>ステータス</th>
                   <th>優先度</th>
                   <th>担当者</th>
+                  <th>副担当</th>
                   <th>期限日</th>
                   <th>登録日</th>
                 </tr>
               </thead>
               <tbody id="issues-tbody">
-                <tr><td colspan="6" class="text-center py-4 text-muted">読み込み中...</td></tr>
+                <tr><td colspan="8" class="text-center py-4 text-muted">読み込み中...</td></tr>
               </tbody>
             </table>
           </div>
@@ -141,12 +162,7 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">ステータス</label>
-              <select id="issue-status" class="form-select">
-                <option value="open">未対応</option>
-                <option value="in_progress">処理中</option>
-                <option value="resolved">処理済み</option>
-                <option value="closed">完了</option>
-              </select>
+              <select id="issue-status" class="form-select"></select>
             </div>
             <div class="col-md-6">
               <label class="form-label">優先度</label>
@@ -164,12 +180,22 @@
               </select>
             </div>
             <div class="col-md-6">
+              <label class="form-label">副担当（メンター）</label>
+              <select id="issue-mentor" class="form-select">
+                <option value="">副担当なし</option>
+              </select>
+            </div>
+            <div class="col-md-6">
               <label class="form-label">期限日</label>
               <input type="date" id="issue-due-date" class="form-control">
             </div>
             <div class="col-md-6">
               <label class="form-label">開始日</label>
               <input type="date" id="issue-start-date" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">予定工数（h）</label>
+              <input type="number" id="issue-planned-hours" class="form-control" min="0" step="0.5" placeholder="例：2.0">
             </div>
           </div>
         </div>
@@ -191,6 +217,10 @@
         </div>
         <div class="modal-body">
           <div class="mb-3">
+            <label class="form-label">PJコード</label>
+            <input type="text" id="edit-project-code" class="form-control" maxlength="20" style="text-transform:uppercase">
+          </div>
+          <div class="mb-3">
             <label class="form-label">プロジェクト名 <span class="text-danger">*</span></label>
             <input type="text" id="edit-project-name" class="form-control">
           </div>
@@ -202,6 +232,58 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
           <button type="button" class="btn btn-primary" id="update-project-btn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- メンバー管理モーダル -->
+  <div class="modal fade" id="manageMembersModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-people me-2"></i>メンバー管理</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-3" style="font-size:12.5px">
+            チェックを入れたメンバーのみがこのPJを閲覧できます。<br>
+            全員外すと全員がアクセス可能になります。
+          </p>
+          <div id="member-checkbox-list" style="max-height:340px;overflow-y:auto"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+          <button type="button" class="btn btn-primary" id="save-members-btn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- プロフィール設定モーダル -->
+  <div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>プロフィール設定</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-4">
+            <div id="profile-avatar-preview"
+                 style="width:80px;height:80px;margin:0 auto 12px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:32px;color:white;overflow:hidden"></div>
+            <label class="btn btn-sm btn-outline-secondary" for="avatar-file-input" style="cursor:pointer">
+              <i class="bi bi-camera me-1"></i>画像を変更
+              <input type="file" id="avatar-file-input" style="display:none" accept="image/*">
+            </label>
+          </div>
+          <div>
+            <label class="form-label fw-semibold" style="font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)">テーマカラー</label>
+            <div class="d-flex gap-2 flex-wrap mt-1" id="theme-color-picker"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
         </div>
       </div>
     </div>

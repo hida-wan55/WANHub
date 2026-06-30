@@ -31,9 +31,10 @@
       </div>
     </div>
     <div class="sidebar-footer">
-      <div class="user-avatar" id="user-avatar-sidebar">--</div>
-      <div class="user-info">
+      <div class="user-avatar" id="user-avatar-sidebar" style="cursor:pointer" data-bs-toggle="modal" data-bs-target="#profileModal">--</div>
+      <div class="user-info" style="cursor:pointer" data-bs-toggle="modal" data-bs-target="#profileModal">
         <div class="user-name" id="user-name-sidebar">-</div>
+        <div style="font-size:10px;color:rgba(201,214,227,0.45)">プロフィール設定</div>
       </div>
       <button class="logout-btn" onclick="logout()" title="ログアウト">
         <i class="bi bi-box-arrow-right"></i>
@@ -50,7 +51,7 @@
         </ol>
       </nav>
       <div class="d-flex gap-2">
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+        <button class="btn btn-primary btn-sm" id="new-project-btn" style="display:none" data-bs-toggle="modal" data-bs-target="#createProjectModal">
           <i class="bi bi-plus-lg me-1"></i>新規プロジェクト
         </button>
         <a href="/admin.html" class="btn btn-outline-secondary btn-sm" id="admin-btn" style="display:none">
@@ -64,28 +65,34 @@
 
       <!-- 統計 -->
       <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md">
           <div class="stat-card">
             <p class="stat-number" id="stat-projects">-</p>
             <p class="stat-label">プロジェクト数</p>
           </div>
         </div>
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
+        <div class="col-6 col-md">
+          <div class="stat-card clickable" data-filter="open">
             <p class="stat-number" id="stat-open">-</p>
             <p class="stat-label">未対応の課題</p>
           </div>
         </div>
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
+        <div class="col-6 col-md">
+          <div class="stat-card clickable" data-filter="in_progress">
             <p class="stat-number" id="stat-in-progress">-</p>
             <p class="stat-label">処理中の課題</p>
           </div>
         </div>
-        <div class="col-6 col-md-3">
-          <div class="stat-card">
+        <div class="col-6 col-md">
+          <div class="stat-card clickable" data-filter="mine">
             <p class="stat-number" id="stat-my-issues">-</p>
             <p class="stat-label">自分の担当課題</p>
+          </div>
+        </div>
+        <div class="col-6 col-md">
+          <div class="stat-card clickable overdue-card" data-filter="overdue">
+            <p class="stat-number" id="stat-overdue">-</p>
+            <p class="stat-label">期限切れ</p>
           </div>
         </div>
       </div>
@@ -94,8 +101,21 @@
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0 fw-bold" style="font-size:15px">プロジェクト一覧</h6>
       </div>
-      <div class="row g-3" id="projects-grid">
-        <!-- JS で生成 -->
+      <div class="row g-3" id="projects-grid"></div>
+    </div>
+  </div>
+
+  <!-- ダッシュボード課題リストモーダル -->
+  <div class="modal fade" id="issueListModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="issue-list-modal-title">課題一覧</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="issue-list-modal-body" style="min-height:200px">
+          <div class="text-center text-muted py-4">読み込み中...</div>
+        </div>
       </div>
     </div>
   </div>
@@ -111,6 +131,11 @@
         <div class="modal-body">
           <div id="modal-error" style="display:none" class="mb-3"></div>
           <div class="mb-3">
+            <label class="form-label">PJコード <span class="text-danger">*</span></label>
+            <input type="text" id="project-code" class="form-control" placeholder="例：PJ01" maxlength="20" style="text-transform:uppercase">
+            <div class="form-text">課題番号のプレフィックスになります（例：PJ01-01）</div>
+          </div>
+          <div class="mb-3">
             <label class="form-label">プロジェクト名 <span class="text-danger">*</span></label>
             <input type="text" id="project-name" class="form-control" placeholder="例：〇〇コーポレートサイト制作">
           </div>
@@ -122,6 +147,35 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
           <button type="button" class="btn btn-primary" id="create-project-btn">作成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- プロフィール設定モーダル -->
+  <div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>プロフィール設定</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="text-center mb-4">
+            <div id="profile-avatar-preview"
+                 style="width:80px;height:80px;margin:0 auto 12px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:32px;color:white;overflow:hidden"></div>
+            <label class="btn btn-sm btn-outline-secondary" for="avatar-file-input" style="cursor:pointer">
+              <i class="bi bi-camera me-1"></i>画像を変更
+              <input type="file" id="avatar-file-input" style="display:none" accept="image/*">
+            </label>
+          </div>
+          <div>
+            <label class="form-label fw-semibold" style="font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)">テーマカラー</label>
+            <div class="d-flex gap-2 flex-wrap mt-1" id="theme-color-picker"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
         </div>
       </div>
     </div>

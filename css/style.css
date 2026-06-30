@@ -134,6 +134,35 @@ body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo
 .comment-date { font-size: 12px; color: var(--text-muted); }
 .comment-content { font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; }
 
+/* ===== コメント折りたたみ ===== */
+.comment-content-wrap { position: relative; }
+.comment-content-wrap.collapsed .comment-content {
+  max-height: 6.6em; /* 4行 × line-height 1.65 */
+  overflow: hidden;
+}
+.comment-content-wrap.collapsed::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2.5em;
+  background: linear-gradient(to bottom, transparent, #fff);
+  pointer-events: none;
+}
+.comment-unread .comment-content-wrap.collapsed::after {
+  background: linear-gradient(to bottom, transparent, #F0F7FF);
+}
+.comment-toggle-btn {
+  border: none; background: none; cursor: pointer;
+  color: var(--primary); font-size: 12.5px;
+  padding: 3px 0; margin-top: 2px; display: inline-flex; align-items: center; gap: 3px;
+}
+.comment-toggle-btn:hover { text-decoration: underline; }
+
+/* ===== コメント未読 ===== */
+.comment-unread {
+  background: #F0F7FF;
+  margin: 0 -18px; padding: 14px 18px;
+  border-left: 3px solid var(--primary);
+}
+
 /* ===== 課題詳細 ===== */
 .issue-detail-title { font-size: 21px; font-weight: 700; line-height: 1.3; margin: 0; }
 .issue-meta-panel { background: #F8F9FA; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
@@ -150,7 +179,434 @@ body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo
 .login-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; }
 .login-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
+/* ===== テーマカラースウォッチ ===== */
+.theme-swatch {
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer; border: 2px solid transparent;
+  transition: transform 0.12s, box-shadow 0.12s;
+  flex-shrink: 0;
+}
+.theme-swatch:hover { transform: scale(1.18); }
+.theme-swatch.active { border-color: white; box-shadow: 0 0 0 2px var(--primary); }
+
+/* ===== ドラッグ&ドロップゾーン ===== */
+.drop-zone { position: relative; transition: background 0.15s; }
+.drop-zone.dragover { background: rgba(31,111,235,0.04); }
+.drop-zone.dragover::after {
+  content: 'ここにドロップ';
+  position: absolute; inset: 0;
+  background: rgba(31,111,235,0.08);
+  border: 2px dashed var(--primary);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--primary); font-weight: 600;
+  pointer-events: none; z-index: 10;
+}
+
+/* ===== いいねボタン ===== */
+.like-btn {
+  border: 1px solid var(--border); background: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 13.5px; color: var(--text-muted);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.like-btn:hover { background: #FFEBEE; color: #E53E3E; border-color: #E53E3E; }
+.like-btn.liked { color: #E53E3E; border-color: #E53E3E; background: #FFF5F5; }
+.like-btn i { font-size: 15px; }
+
+/* ===== 戻るボタン ===== */
+.back-btn {
+  color: var(--text-muted); font-size: 13px; text-decoration: none; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 13px; border-radius: 6px;
+  border: 1px solid var(--border); background: #fff;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.back-btn:hover { background: var(--bg); color: var(--primary); border-color: var(--primary); }
+
+/* ===== 通知ベル ===== */
+.notification-bell { position: relative; }
+.bell-btn {
+  border: none; background: none; cursor: pointer; position: relative;
+  padding: 5px 8px; border-radius: 6px; font-size: 18px; color: var(--text-muted);
+  transition: background 0.12s, color 0.12s; line-height: 1;
+}
+.bell-btn:hover { background: var(--bg); color: var(--primary); }
+.bell-badge {
+  position: absolute; top: 1px; right: 1px;
+  background: #E53E3E; color: #fff;
+  font-size: 9px; font-weight: 700; line-height: 1;
+  padding: 2px 4px; border-radius: 10px; min-width: 15px; text-align: center;
+}
+.bell-dropdown {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  width: 320px; background: #fff;
+  border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 500;
+}
+.bell-header {
+  padding: 11px 16px; font-weight: 600; font-size: 13.5px;
+  border-bottom: 1px solid var(--border);
+}
+.bell-footer {
+  padding: 8px 16px; border-top: 1px solid var(--border); text-align: center;
+}
+.notification-item {
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; gap: 8px;
+  text-decoration: none; color: var(--text); transition: background 0.1s;
+}
+.notification-item:last-child { border-bottom: none; }
+.notification-item:hover { background: var(--bg); color: var(--text); }
+.notification-item.unread { background: #F0F7FF; }
+.notification-item.unread:hover { background: #E3F0FF; }
+.notif-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--primary);
+  flex-shrink: 0; margin-top: 5px;
+}
+.notif-text { font-size: 12.5px; line-height: 1.5; }
+.notif-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* ===== メンション ===== */
+.mention {
+  color: var(--primary);
+  font-weight: 600;
+  background: rgba(31, 111, 235, 0.12);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.mention-self {
+  color: #B45309;
+  font-weight: 600;
+  background: rgba(214, 158, 46, 0.15);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.mention-dropdown {
+  position: absolute; background: #fff;
+  border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 400; width: 200px; max-height: 200px; overflow-y: auto;
+}
+.mention-item {
+  padding: 7px 12px; cursor: pointer; font-size: 13.5px;
+  display: flex; align-items: center; gap: 8px; transition: background 0.1s;
+}
+.mention-item:hover, .mention-item.active { background: var(--bg); }
+
+/* ===== 未読ドット ===== */
+.unread-dot {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--primary);
+  margin-left: 6px; flex-shrink: 0; vertical-align: middle;
+}
+
 /* ===== ユーティリティ ===== */
 .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
 .empty-state i { font-size: 44px; margin-bottom: 12px; display: block; opacity: 0.25; }
 .empty-state p { font-size: 14px; margin: 0; }
+
+/* ===== ラベルバッジ ===== */
+.label-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 9px; border-radius: 12px;
+  font-size: 11px; font-weight: 500; line-height: 1.6;
+  border: 1px solid transparent; white-space: nowrap;
+}
+.label-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.label-picker-item {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 12px;
+  font-size: 12px; cursor: pointer; border: 2px solid transparent;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.label-picker-item.selected { border-color: currentColor !important; font-weight: 600; }
+.label-picker-item:hover { opacity: 0.75; }
+
+/* ===== 期限切れ ===== */
+.overdue-row td { background: #FFF5F5 !important; }
+.overdue-row .issue-title-link { color: #C0392B !important; }
+.overdue-badge {
+  font-size: 10px; padding: 1px 5px; background: #DC3545;
+  color: #fff; border-radius: 4px; margin-left: 4px;
+  vertical-align: middle; font-weight: 600;
+}
+.stat-card.overdue-card .stat-number { color: #DC3545; }
+
+/* ===== 統計カード（クリック可能） ===== */
+.stat-card.clickable {
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+}
+.stat-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+/* ===== グローバル検索 ===== */
+.search-trigger-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); padding: 5px 8px; border-radius: 6px;
+  font-size: 16px; line-height: 1; transition: color 0.15s, background 0.15s;
+}
+.search-trigger-btn:hover { color: var(--primary); background: rgba(0,0,0,0.05); }
+.search-result-item {
+  display: block; padding: 10px 16px; text-decoration: none; color: inherit;
+  border-bottom: 1px solid var(--border); transition: background 0.1s;
+}
+.search-result-item:hover { background: var(--bg); color: var(--text); }
+.search-result-project { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+.search-result-title { font-size: 13.5px; font-weight: 500; }
+
+/* ===== ビュー切替タブ ===== */
+.view-tabs {
+  display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 16px;
+}
+.view-tab {
+  padding: 8px 18px; font-size: 13.5px; font-weight: 500;
+  color: var(--text-muted); text-decoration: none;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s; display: inline-flex; align-items: center;
+}
+.view-tab:hover { color: var(--primary); }
+.view-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.view-tab.disabled { pointer-events: none; opacity: 0.35; }
+
+/* ===== カンバンボード ===== */
+.board-container {
+  display: flex; gap: 14px; overflow-x: auto; flex: 1;
+  align-items: flex-start; padding-bottom: 16px;
+}
+.board-container::-webkit-scrollbar { height: 6px; }
+.board-container::-webkit-scrollbar-track { background: transparent; }
+.board-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.board-column {
+  flex-shrink: 0; width: 268px;
+  background: #F0F2F5; border-radius: 10px;
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 280px);
+}
+.board-column-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 14px; font-weight: 600; font-size: 13px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.board-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.board-column-count {
+  margin-left: auto; background: rgba(0,0,0,0.1);
+  border-radius: 10px; font-size: 11px; padding: 1px 7px; font-weight: 600;
+}
+.board-column-body {
+  flex: 1; overflow-y: auto; padding: 8px;
+  display: flex; flex-direction: column; gap: 8px;
+  min-height: 60px;
+}
+.board-column-body::-webkit-scrollbar { width: 4px; }
+.board-column-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.board-column-body.drag-over { background: rgba(31,111,235,0.08); border-radius: 0 0 10px 10px; outline: 2px dashed var(--primary); outline-offset: -4px; }
+
+.board-card {
+  background: #fff; border-radius: 8px; padding: 12px 13px;
+  border: 1px solid var(--border); cursor: grab;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: box-shadow 0.15s;
+}
+.board-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.board-card.dragging { opacity: 0.45; cursor: grabbing; }
+.board-card-title { font-size: 13.5px; font-weight: 500; line-height: 1.45; margin-bottom: 9px; }
+.board-card-title a { color: var(--text); text-decoration: none; }
+.board-card-title a:hover { color: var(--primary); }
+.board-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.board-card-due { font-size: 11.5px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 3px; }
+.board-card-due.overdue { color: #DC3545; }
+
+/* ===== Wiki ===== */
+.wiki-body {
+  display: flex; flex: 1; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 8px; background: #fff;
+}
+.wiki-left {
+  width: 220px; flex-shrink: 0; border-right: 1px solid var(--border);
+  overflow-y: auto; background: #F8F9FA;
+}
+.wiki-right {
+  flex: 1; overflow-y: auto; padding: 24px 28px;
+  display: flex; flex-direction: column;
+}
+.wiki-page-item {
+  display: flex; align-items: center; gap: 2px;
+  padding: 9px 14px; cursor: pointer; font-size: 13.5px;
+  border-bottom: 1px solid var(--border); color: var(--text);
+  transition: background 0.1s;
+}
+.wiki-page-item:hover  { background: rgba(31,111,235,0.06); color: var(--primary); }
+.wiki-page-item.active { background: rgba(31,111,235,0.12); color: var(--primary); font-weight: 600; }
+.wiki-page-item-title  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wiki-no-pages { padding: 24px 14px; text-align: center; font-size: 13px; color: var(--text-muted); }
+.wiki-no-pages i { font-size: 26px; display: block; margin-bottom: 8px; opacity: 0.3; }
+
+.wiki-empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; color: var(--text-muted);
+}
+.wiki-empty-state i { font-size: 44px; margin-bottom: 12px; opacity: 0.2; }
+.wiki-empty-state p { font-size: 13.5px; text-align: center; line-height: 1.8; }
+
+.wiki-view-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 16px; gap: 12px;
+}
+.wiki-page-title-display { font-size: 20px; font-weight: 700; margin: 0; line-height: 1.3; }
+.wiki-content-body {
+  font-size: 14px; line-height: 1.8; white-space: pre-wrap;
+  color: var(--text); margin-bottom: 20px; flex: 1;
+}
+.wiki-page-meta {
+  font-size: 11.5px; color: var(--text-muted);
+  padding-top: 12px; border-top: 1px solid var(--border);
+}
+.wiki-editor-textarea {
+  min-height: 400px; font-size: 14px; line-height: 1.75;
+  font-family: inherit; resize: vertical;
+}
+
+/* ===== ガントチャート ===== */
+.gantt-container {
+  flex: 1; overflow: auto;
+  border: 1px solid var(--border); border-radius: 8px; background: #fff;
+}
+.gantt-inner { min-width: 100%; }
+
+.gantt-row { display: flex; border-bottom: 1px solid var(--border); }
+.gantt-row:last-child { border-bottom: none; }
+
+.gantt-header-row { position: sticky; background: #F8F9FA; }
+.gantt-month-row  { top: 0;   z-index: 12; height: 28px; }
+.gantt-day-row    { top: 28px; z-index: 12; height: 26px; }
+.gantt-header-row .gantt-cell-left { background: #F8F9FA; z-index: 16; }
+
+.gantt-cell-left {
+  width: 240px; flex-shrink: 0;
+  position: sticky; left: 0; z-index: 8;
+  background: #fff; border-right: 2px solid var(--border);
+  display: flex; align-items: center; overflow: hidden; padding: 6px 10px;
+}
+.gantt-header-label { font-size: 11px; color: var(--text-muted); }
+
+.gantt-cell-right {
+  flex-shrink: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent calc(28px - 1px),
+    var(--border) calc(28px - 1px),
+    var(--border) 28px
+  );
+}
+
+.gantt-today-col {
+  position: absolute; top: 0; bottom: 0;
+  background: rgba(31,111,235,0.07); pointer-events: none; z-index: 1;
+}
+
+.gantt-month-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 600; color: var(--text-muted);
+  height: 28px; flex-shrink: 0;
+  border-right: 2px solid var(--border); white-space: nowrap; overflow: hidden;
+}
+.gantt-day-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10.5px; color: var(--text-muted); height: 26px;
+  width: 28px; flex-shrink: 0;
+}
+.gantt-day-cell.weekend { color: #DC3545; background: rgba(220,53,69,0.04); }
+.gantt-day-cell.today   { color: var(--primary); font-weight: 700; background: rgba(31,111,235,0.1); }
+
+.gantt-data-row { min-height: 44px; }
+.gantt-data-row:hover .gantt-cell-left { background: #FAFBFF; }
+
+.gantt-issue-info { display: flex; flex-direction: column; gap: 2px; overflow: hidden; width: 100%; }
+.gantt-issue-title {
+  font-size: 13px; color: var(--text); text-decoration: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; line-height: 1.4;
+}
+.gantt-issue-title:hover { color: var(--primary); }
+.gantt-issue-title.overdue-text { color: #DC3545; }
+.gantt-issue-assignee { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 3px; }
+
+.gantt-bar {
+  position: absolute; top: 10px; height: 22px; border-radius: 4px;
+  display: flex; align-items: center; padding: 0 7px; z-index: 3;
+  opacity: 0.88; cursor: pointer; transition: opacity 0.12s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+}
+.gantt-bar:hover { opacity: 1; }
+.gantt-bar-label {
+  font-size: 10.5px; color: #fff; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; font-weight: 500;
+}
+
+.gantt-no-dates-divider {
+  padding: 5px 14px; font-size: 11.5px; font-weight: 600;
+  color: var(--text-muted); background: #F5F5F5;
+  border-top: 2px solid var(--border); border-bottom: 1px solid var(--border);
+  position: sticky; left: 0;
+}
+.gantt-no-dates-bg {
+  background-image: repeating-linear-gradient(
+    45deg, transparent, transparent 5px,
+    rgba(0,0,0,0.018) 5px, rgba(0,0,0,0.018) 10px
+  ) !important;
+}
+
+/* ===== サブタスク ===== */
+.subtask-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+}
+.subtask-item:last-child { border-bottom: none; }
+.subtask-link { color: var(--text); text-decoration: none; flex: 1; }
+.subtask-link:hover { color: var(--primary); }
+
+/* ===== 親課題検索 ===== */
+.parent-search-results {
+  max-height: 160px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.parent-search-item {
+  padding: 7px 10px; cursor: pointer; font-size: 13px;
+  border-bottom: 1px solid var(--border); transition: background 0.1s;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.parent-search-item:last-child { border-bottom: none; }
+.parent-search-item:hover { background: var(--bg); }
+
+/* ===== ダッシュボード課題リスト ===== */
+.dash-issue-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.dash-issue-row:last-child { border-bottom: none; }
+.dash-issue-title-wrap { flex: 1; min-width: 0; }
+.dash-issue-link {
+  color: var(--text); text-decoration: none; font-weight: 500;
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dash-issue-link:hover { color: var(--primary); }
+.dash-issue-project { font-size: 11px; color: var(--text-muted); }
+
+/* ===== 課題番号バッジ ===== */
+.issue-num {
+  display: inline-block;
+  font-size: 11px; font-weight: 600;
+  color: var(--primary);
+  background: rgba(31,111,235,0.08);
+  border: 1px solid rgba(31,111,235,0.2);
+  border-radius: 4px; padding: 1px 6px;
+  white-space: nowrap;
+}
