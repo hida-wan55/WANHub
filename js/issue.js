@@ -622,10 +622,12 @@ function setupCommentSubmit() {
 
     // コメント / アクティビティログを投稿
     let insertError;
+    // content は NOT NULL 制約があるため、空の場合は空文字列を使用
+    const safeContent = content || '';
     const fullPayload = {
       issue_id:      issueId,
       user_id:       currentProfile?.id,
-      content:       content || null,
+      content:       safeContent,
       is_activity:   isActivity,
       activity_data: isActivity ? changes : null,
     };
@@ -633,16 +635,13 @@ function setupCommentSubmit() {
     if (err1) {
       console.error('[comment insert] error:', err1);
       // is_activity / activity_data 列が未作成の場合はフォールバック
-      if (err1.code === '42703' || err1.message?.includes('is_activity') || err1.message?.includes('activity_data')) {
-        const { error: err2 } = await supabaseClient.from('comments').insert({
-          issue_id: issueId,
-          user_id:  currentProfile?.id,
-          content:  content || null,
-        });
-        insertError = err2;
-      } else {
-        insertError = err1;
-      }
+      const { error: err2 } = await supabaseClient.from('comments').insert({
+        issue_id: issueId,
+        user_id:  currentProfile?.id,
+        content:  safeContent,
+      });
+      insertError = err2;
+      if (err2) console.error('[comment insert fallback] error:', err2);
     }
 
     btn.disabled = false;
