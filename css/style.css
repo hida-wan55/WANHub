@@ -610,3 +610,102 @@ body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo
   border-radius: 4px; padding: 1px 6px;
   white-space: nowrap;
 }
+
+/* ===== コメント書式ツールバー ===== */
+.comment-format-toolbar {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+}
+.format-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 1px 7px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1.6;
+  min-width: 26px;
+  text-align: center;
+}
+.format-btn:hover { background: var(--bg-card); border-color: var(--border); color: var(--text); }
+
+/* ===== 変更ログ（アクティビティ） ===== */
+.activity-log {
+  background: rgba(31,111,235,0.04);
+  border-left: 2px solid rgba(31,111,235,0.3);
+  border-radius: 0 4px 4px 0;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.activity-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 2;
+}
+.activity-item .from-val { text-decoration: line-through; opacity: 0.6; }
+.activity-item .to-val   { color: var(--text); font-weight: 600; }
+
+/* ===== コメント確認アイコン ===== */
+.comment-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.confirm-icons-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+.confirm-icon-wrap {
+  position: relative;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+  cursor: default;
+  display: inline-block;
+}
+.confirm-icon-wrap.confirmed { opacity: 1; }
+.confirm-check-badge {
+  position: absolute;
+  bottom: -2px; right: -2px;
+  width: 12px; height: 12px;
+  background: #2da44e;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px; color: white;
+  border: 1.5px solid white;
+}
+.confirm-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1.5;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.confirm-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+.confirmed-label {
+  font-size: 11px;
+  color: #2da44e;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

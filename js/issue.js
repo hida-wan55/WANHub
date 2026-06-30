@@ -2,9 +2,85 @@ let issueId        = null;
 let currentProfile = null;
 let issue          = null;
 let profiles       = [];
-let allLabels      = [];   // 全ラベル一覧
-let issueLabels    = [];   // この課題に付いているラベル
-let prevReadAt     = null; // 前回の既読時刻（コメント未読判定に使用）
+let allLabels      = [];      // 全ラベル一覧
+let issueLabels    = [];      // この課題に付いているラベル
+let prevReadAt     = null;    // 前回の既読時刻（コメント未読判定に使用）
+let issuePrevState = {};      // 変更前の値（変更ログ検出用）
+let projectMembers = [];      // PJメンバー（確認アイコン用）
+
+const FIELD_LABELS   = { status:'ステータス', priority:'優先度', assignee_id:'担当者', mentor_id:'副担当', start_date:'開始日', due_date:'期限日', planned_hours:'予定工数', actual_hours:'実績工数' };
+const PRIORITY_LABEL = { urgent:'緊急', high:'高', medium:'中', low:'低' };
+
+function displayFieldValue(field, val) {
+  if (val === '' || val === null || val === undefined) return '未設定';
+  switch (field) {
+    case 'status':        return window.statusList?.find(s => s.name === val)?.label || val;
+    case 'priority':      return PRIORITY_LABEL[val] || val;
+    case 'assignee_id':
+    case 'mentor_id':     return profiles.find(p => p.id === val)?.name || '未設定';
+    case 'planned_hours':
+    case 'actual_hours':  return `${val}h`;
+    default:              return String(val);
+  }
+}
+
+function detectMetaChanges(prev, current) {
+  return Object.keys(FIELD_LABELS).reduce((acc, field) => {
+    const pv = String(prev[field] ?? '');
+    const cv = String(current[field] ?? '');
+    if (pv !== cv) acc.push({ field, label: FIELD_LABELS[field], from: displayFieldValue(field, prev[field] ?? ''), to: displayFieldValue(field, current[field] ?? '') });
+    return acc;
+  }, []);
+}
+
+function renderCommentContent(text) {
+  if (!text) return '';
+  let html = escapeHtml(text);
+  html = html.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([^*\n]+?)\*/g,     '<em>$1</em>');
+  html = html.replace(/~~([^~\n]+?)~~/g,     '<del>$1</del>');
+  const sorted = [...profiles].sort((a, b) => b.name.length - a.name.length);
+  for (const p of sorted) {
+    const escaped = escapeHtml(p.name);
+    const cls = p.id === currentProfile?.id ? 'mention-self' : 'mention';
+    html = html.split(`@${escaped}`).join(`<span class="${cls}">@${escaped}</span>`);
+  }
+  return html.replace(/\n/g, '<br>');
+}
+
+function applyFormat(format) {
+  const textarea = document.getElementById('comment-input');
+  const start  = textarea.selectionStart;
+  const end    = textarea.selectionEnd;
+  const selected = textarea.value.slice(start, end);
+  const markers  = { bold: '**', italic: '*', strike: '~~' };
+  const fallback = { bold: '太字', italic: '斜体', strike: '打消し' };
+  const marker   = markers[format] || '';
+  const inner    = selected || fallback[format] || '';
+  const newText  = `${marker}${inner}${marker}`;
+  textarea.value = textarea.value.slice(0, start) + newText + textarea.value.slice(end);
+  if (selected) { textarea.setSelectionRange(start, start + newText.length); }
+  else          { textarea.setSelectionRange(start + marker.length, start + marker.length + inner.length); }
+  textarea.focus();
+}
+
+function setupFormatToolbar() {
+  document.querySelectorAll('.format-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyFormat(btn.dataset.format));
+  });
+}
+
+async function loadProjectMembers() {
+  const projId = issue?.project?.id;
+  if (!projId) { projectMembers = profiles; return; }
+  const { data: members } = await supabaseClient
+    .from('project_members')
+    .select('user_id, profile:profiles(id,name,avatar_url)')
+    .eq('project_id', projId);
+  projectMembers = (!members || members.length === 0)
+    ? profiles
+    : members.map(m => m.profile).filter(Boolean);
+}
 
 async function init() {
   const session = await requireAuth();
@@ -36,8 +112,9 @@ async function init() {
     prevReadAt = readData?.read_at || null;
   }
 
+  // loadIssue を先に実行（issue.project.id が loadComments/loadProjectMembers で必要）
+  await loadIssue();
   await Promise.all([
-    loadIssue(),
     loadSidebarProjects(),
     loadComments(),
     loadAttachments(),
@@ -51,10 +128,10 @@ async function init() {
 
   setupTitleEdit();
   setupDescEdit();
-  setupMetaSave();
   setupCreateSubIssue();
   setupParentSearch();
   setupCommentSubmit();
+  setupFormatToolbar();
   setupFileUpload();
   setupDragDrop();
   setupDelete();
@@ -129,6 +206,18 @@ async function loadIssue() {
   document.getElementById('meta-assignee').value = data.assignee_id || '';
   document.getElementById('meta-mentor').value   = data.mentor_id   || '';
   renderParentIssue(data.parent);
+
+  // 変更前の値を保存（変更ログ検出用）
+  issuePrevState = {
+    status:        data.status        || '',
+    priority:      data.priority      || '',
+    assignee_id:   data.assignee_id   || '',
+    mentor_id:     data.mentor_id     || '',
+    start_date:    data.start_date    || '',
+    due_date:      data.due_date      || '',
+    planned_hours: data.planned_hours != null ? String(data.planned_hours) : '',
+    actual_hours:  data.actual_hours  != null ? String(data.actual_hours)  : '',
+  };
 }
 
 // profiles を先読みし、担当者セレクトを構築する（loadComments より先に呼ぶ）
@@ -195,6 +284,11 @@ async function loadLikes() {
 }
 
 async function loadComments() {
+  // PJメンバー未ロードなら先に取得
+  if (projectMembers.length === 0 && issue?.project?.id) {
+    await loadProjectMembers();
+  }
+
   const { data, error } = await supabaseClient
     .from('comments')
     .select('*, user:profiles(id,name,avatar_url)')
@@ -209,26 +303,102 @@ async function loadComments() {
     return;
   }
 
+  // 確認状況を一括取得（テーブル未作成の場合は無視）
+  const commentIds = data.map(c => c.id);
+  const confirmMap = {};
+  try {
+    const { data: confs, error: confErr } = await supabaseClient
+      .from('comment_confirmations').select('comment_id, user_id').in('comment_id', commentIds);
+    if (!confErr && confs) {
+      confs.forEach(c => {
+        if (!confirmMap[c.comment_id]) confirmMap[c.comment_id] = new Set();
+        confirmMap[c.comment_id].add(c.user_id);
+      });
+    }
+  } catch (_) { /* comment_confirmations テーブル未作成時は無視 */ }
+
   el.innerHTML = data.map(c => {
-    // 自分以外のコメントで、前回閲覧後に投稿されたものは未読
-    const isNew = prevReadAt
-      && c.created_at > prevReadAt
-      && c.user?.id !== currentProfile?.id;
+    const isNew = prevReadAt && c.created_at > prevReadAt && c.user?.id !== currentProfile?.id;
+    const confirmedSet = confirmMap[c.id] || new Set();
+    const myConfirmed  = confirmedSet.has(currentProfile?.id);
+
+    // 変更ログ
+    let activityHtml = '';
+    if (c.is_activity && c.activity_data?.length > 0) {
+      activityHtml = `
+        <div class="activity-log">
+          ${c.activity_data.map(ch => `
+            <div class="activity-item">
+              <span style="color:var(--primary);font-size:8px;flex-shrink:0">●</span>
+              <span>${escapeHtml(ch.label)}：<span class="from-val">${escapeHtml(ch.from)}</span><i class="bi bi-arrow-right" style="font-size:10px;margin:0 4px"></i><span class="to-val">${escapeHtml(ch.to)}</span></span>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+
+    // コメント本文
+    const contentHtml = c.content ? `
+      <div class="comment-content-wrap">
+        <div class="comment-content">${renderCommentContent(c.content)}</div>
+      </div>` : '';
+
+    // 確認アイコン
+    const iconsHtml = projectMembers.map(p => `
+      <span class="confirm-icon-wrap ${confirmedSet.has(p.id) ? 'confirmed' : ''}"
+            data-user-id="${p.id}" title="${escapeHtml(p.name)}">
+        ${avatarHtml(p, 22, 9)}
+        ${confirmedSet.has(p.id) ? '<span class="confirm-check-badge"><i class="bi bi-check-lg"></i></span>' : ''}
+      </span>`).join('');
+
+    const confirmBtnHtml = currentProfile && !myConfirmed
+      ? `<button class="confirm-btn" data-comment-id="${c.id}"><i class="bi bi-check2 me-1"></i>確認</button>`
+      : myConfirmed
+        ? `<span class="confirmed-label"><i class="bi bi-check2-circle me-1"></i>確認済み</span>`
+        : '';
 
     return `
-      <div class="comment-item ${isNew ? 'comment-unread' : ''}">
+      <div class="comment-item ${isNew ? 'comment-unread' : ''}" id="comment-item-${c.id}">
         <div class="comment-header">
           ${avatarHtml(c.user, 28, 12)}
           <span class="comment-author">${escapeHtml(c.user?.name || '-')}</span>
           <span class="comment-date">${formatDate(c.created_at)}</span>
           ${isNew ? '<span class="badge ms-auto" style="background:var(--primary);font-size:9px;padding:3px 7px">NEW</span>' : ''}
         </div>
-        <div class="comment-content-wrap">
-          <div class="comment-content">${highlightMentions(c.content)}</div>
-        </div>
-      </div>
-    `;
+        ${activityHtml}
+        ${contentHtml}
+        ${projectMembers.length > 0 ? `
+        <div class="comment-footer">
+          <div class="confirm-icons-row">${iconsHtml}</div>
+          ${confirmBtnHtml}
+        </div>` : ''}
+      </div>`;
   }).join('');
+
+  // 確認ボタン
+  el.querySelectorAll('.confirm-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cid = btn.dataset.commentId;
+      btn.disabled = true;
+      const { error: cErr } = await supabaseClient.from('comment_confirmations')
+        .insert({ comment_id: cid, user_id: currentProfile.id });
+      if (!cErr) {
+        const wrap = el.querySelector(`#comment-item-${cid} .confirm-icon-wrap[data-user-id="${currentProfile.id}"]`);
+        if (wrap) {
+          wrap.classList.add('confirmed');
+          if (!wrap.querySelector('.confirm-check-badge')) {
+            wrap.insertAdjacentHTML('beforeend', '<span class="confirm-check-badge"><i class="bi bi-check-lg"></i></span>');
+          }
+        }
+        const label = document.createElement('span');
+        label.className = 'confirmed-label';
+        label.innerHTML = '<i class="bi bi-check2-circle me-1"></i>確認済み';
+        btn.replaceWith(label);
+      } else {
+        btn.disabled = false;
+        if (cErr.code !== '23505') alert('確認に失敗しました');
+      }
+    });
+  });
 
   applyCommentCollapse(el);
 }
@@ -361,8 +531,17 @@ function setupDragDrop() {
 
 function setupCommentSubmit() {
   const textarea = document.getElementById('comment-input');
-
   setupMentionAutocomplete(textarea);
+
+  // サイドバーのフィールド変更時に「未保存の変更あり」ヒントを表示
+  ['meta-status','meta-priority','meta-assignee','meta-mentor',
+   'meta-start-date','meta-due-date','meta-planned-hours','meta-actual-hours'
+  ].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      const hint = document.getElementById('meta-change-hint');
+      if (hint) hint.style.display = 'inline';
+    });
+  });
 
   // 画像ペースト
   textarea.addEventListener('paste', async (e) => {
@@ -389,20 +568,72 @@ function setupCommentSubmit() {
   });
 
   document.getElementById('add-comment-btn').addEventListener('click', async () => {
-    const content = textarea.value.trim();
-    if (!content) return;
+    const content    = textarea.value.trim();
+    const rawPlanned = document.getElementById('meta-planned-hours').value;
+    const rawActual  = document.getElementById('meta-actual-hours').value;
+
+    const currentState = {
+      status:        document.getElementById('meta-status').value,
+      priority:      document.getElementById('meta-priority').value,
+      assignee_id:   document.getElementById('meta-assignee').value   || '',
+      mentor_id:     document.getElementById('meta-mentor').value     || '',
+      start_date:    document.getElementById('meta-start-date').value || '',
+      due_date:      document.getElementById('meta-due-date').value   || '',
+      planned_hours: rawPlanned,
+      actual_hours:  rawActual,
+    };
+
+    const changes    = detectMetaChanges(issuePrevState, currentState);
+    const isActivity = changes.length > 0;
+
+    if (!content && !isActivity) return; // 変更もコメントもない
+
     const btn = document.getElementById('add-comment-btn');
     btn.disabled = true;
-    const { error } = await supabaseClient.from('comments')
-      .insert({ issue_id: issueId, user_id: currentProfile?.id, content });
+
+    // メタが変更されていればDBを更新
+    if (isActivity) {
+      const { error: metaErr } = await supabaseClient.from('issues').update({
+        status:        currentState.status,
+        priority:      currentState.priority,
+        assignee_id:   currentState.assignee_id   || null,
+        mentor_id:     currentState.mentor_id     || null,
+        start_date:    currentState.start_date    || null,
+        due_date:      currentState.due_date      || null,
+        planned_hours: rawPlanned !== '' ? parseFloat(rawPlanned) : null,
+        actual_hours:  rawActual  !== '' ? parseFloat(rawActual)  : null,
+      }).eq('id', issueId);
+
+      if (metaErr) {
+        showError('保存に失敗しました');
+        btn.disabled = false;
+        return;
+      }
+
+      issuePrevState = { ...currentState };
+      document.getElementById('meta-updated').textContent = formatDate(new Date().toISOString());
+      const hint = document.getElementById('meta-change-hint');
+      if (hint) hint.style.display = 'none';
+    }
+
+    // コメント / アクティビティログを投稿
+    const { error } = await supabaseClient.from('comments').insert({
+      issue_id:      issueId,
+      user_id:       currentProfile?.id,
+      content:       content || null,
+      is_activity:   isActivity,
+      activity_data: isActivity ? changes : null,
+    });
+
     btn.disabled = false;
     if (!error) {
-      // 投稿直後は全コメントを既読として表示（自分が送ったので）
       prevReadAt = new Date().toISOString();
       textarea.value = '';
       await loadComments();
       await markIssueAsRead();
-      parseMentionsAndNotify(content);
+      if (content) parseMentionsAndNotify(content);
+    } else {
+      showError('送信に失敗しました');
     }
   });
 }
@@ -567,29 +798,6 @@ function setupDescEdit() {
   });
 }
 
-function setupMetaSave() {
-  document.getElementById('save-meta-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('save-meta-btn');
-    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>保存中...';
-    const rawPlanned = document.getElementById('meta-planned-hours').value;
-    const rawActual  = document.getElementById('meta-actual-hours').value;
-    const { error } = await supabaseClient.from('issues').update({
-      status:        document.getElementById('meta-status').value,
-      priority:      document.getElementById('meta-priority').value,
-      assignee_id:   document.getElementById('meta-assignee').value    || null,
-      mentor_id:     document.getElementById('meta-mentor').value      || null,
-      start_date:    document.getElementById('meta-start-date').value  || null,
-      due_date:      document.getElementById('meta-due-date').value    || null,
-      planned_hours: rawPlanned !== '' ? parseFloat(rawPlanned) : null,
-      actual_hours:  rawActual  !== '' ? parseFloat(rawActual)  : null,
-    }).eq('id', issueId);
-    btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2 me-1"></i>変更を保存';
-    if (!error) {
-      document.getElementById('meta-updated').textContent = formatDate(new Date().toISOString());
-      showSuccess('保存しました');
-    } else { showError('保存に失敗しました'); }
-  });
-}
 
 function setupDelete() {
   document.getElementById('delete-issue-btn').addEventListener('click', async () => {

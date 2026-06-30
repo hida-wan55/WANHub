@@ -136,6 +136,14 @@ async function loadProfiles() {
   const assigneeSel = document.getElementById('issue-assignee');
   const filterSel   = document.getElementById('filter-assignee');
   const mentorSel   = document.getElementById('issue-mentor');
+
+  // 既存の選択肢をリセット（「なし」オプション以外を削除）
+  [assigneeSel, mentorSel].forEach(sel => {
+    while (sel.options.length > 1) sel.remove(1);
+  });
+  // フィルタは「すべて」固定オプション以外を削除
+  while (filterSel.options.length > 1) filterSel.remove(1);
+
   profiles.forEach(p => {
     [assigneeSel, filterSel, mentorSel].forEach(sel => {
       const opt = document.createElement('option');
@@ -481,6 +489,9 @@ async function saveMemberChanges() {
     .select('user_id, profile:profiles(id,name,avatar_url)')
     .eq('project_id', projectId);
   renderMemberList(updatedMembers || []);
+
+  // 担当者ドロップダウンを最新メンバーで再構築
+  await loadProfiles();
 }
 
 init();

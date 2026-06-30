@@ -18,3 +18,17 @@ CREATE TABLE project_members (
 );
 -- 他のテーブルと同様にRLSを無効化
 ALTER TABLE project_members DISABLE ROW LEVEL SECURITY;
+
+-- 4. コメントに変更ログカラムを追加
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS is_activity BOOLEAN DEFAULT FALSE;
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS activity_data JSONB;
+
+-- 5. コメント確認テーブルを作成
+CREATE TABLE IF NOT EXISTS comment_confirmations (
+  comment_id   UUID NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  user_id      UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  confirmed_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (comment_id, user_id)
+);
+ALTER TABLE comment_confirmations DISABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, DELETE ON comment_confirmations TO anon, authenticated;

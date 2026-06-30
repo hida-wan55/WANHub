@@ -174,11 +174,26 @@
                 <div class="text-center text-muted py-3" style="font-size:13.5px">読み込み中...</div>
               </div>
               <hr class="my-3">
-              <label class="form-label fw-semibold" style="font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)">コメントを追加</label>
-              <textarea id="comment-input" class="form-control mb-2" rows="3" placeholder="コメントを入力...（画像はCtrl+Vで貼り付け可能）"></textarea>
-              <button class="btn btn-primary btn-sm" id="add-comment-btn">
-                <i class="bi bi-send me-1"></i>送信
-              </button>
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <label class="form-label fw-semibold mb-0" style="font-size:12px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)">コメント・変更を保存</label>
+                <span id="meta-change-hint" style="font-size:11px;color:var(--primary);display:none">
+                  <i class="bi bi-info-circle me-1"></i>未保存の変更あり
+                </span>
+              </div>
+              <div class="comment-format-toolbar">
+                <button type="button" class="format-btn" data-format="bold"   title="太字 (**テキスト**)"><strong>B</strong></button>
+                <button type="button" class="format-btn" data-format="italic" title="斜体 (*テキスト*)"><em>I</em></button>
+                <button type="button" class="format-btn" data-format="strike" title="打消し線 (~~テキスト~~)"><s>S</s></button>
+              </div>
+              <textarea id="comment-input" class="form-control mb-2" rows="3"
+                        placeholder="コメントを入力...（右サイドバーの変更もまとめて保存されます）"
+                        style="border-top-left-radius:0;border-top-right-radius:0"></textarea>
+              <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-primary btn-sm" id="add-comment-btn">
+                  <i class="bi bi-send me-1"></i>送信・保存
+                </button>
+                <span style="font-size:11.5px;color:var(--text-muted)">コメントなしでも変更のみ保存できます</span>
+              </div>
             </div>
           </div>
 
@@ -245,9 +260,6 @@
               <div class="issue-meta-label">実績工数（h）</div>
               <input type="number" id="meta-actual-hours" class="form-control form-control-sm" min="0" step="0.5" placeholder="例：1.5">
             </div>
-            <button class="btn btn-primary btn-sm w-100 mt-1" id="save-meta-btn">
-              <i class="bi bi-check2 me-1"></i>変更を保存
-            </button>
             <hr class="my-3">
             <div class="issue-meta-item">
               <div class="issue-meta-label">報告者</div>
