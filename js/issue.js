@@ -224,15 +224,34 @@ async function loadIssue() {
 async function loadProfiles() {
   const { data } = await supabaseClient.from('profiles').select('*').order('name');
   profiles = data || [];
+
+  // ドロップダウンはPJメンバーに絞る（メンバー未設定のPJは全員）
+  let dropdownProfiles = profiles;
+  const projId = issue?.project?.id;
+  if (projId) {
+    const { data: members } = await supabaseClient
+      .from('project_members').select('user_id').eq('project_id', projId);
+    if (members && members.length > 0) {
+      const memberIds = new Set(members.map(m => m.user_id));
+      dropdownProfiles = profiles.filter(p => memberIds.has(p.id));
+    }
+  }
+
   const assigneeSel = document.getElementById('meta-assignee');
   const mentorSel   = document.getElementById('meta-mentor');
-  profiles.forEach(p => {
+  dropdownProfiles.forEach(p => {
     [assigneeSel, mentorSel].forEach(sel => {
       const opt = document.createElement('option');
       opt.value = p.id; opt.textContent = p.name;
       sel.appendChild(opt);
     });
   });
+
+  // フィルタ後に現在の担当者・副担当の値を復元
+  if (issue) {
+    assigneeSel.value = issue.assignee_id || '';
+    mentorSel.value   = issue.mentor_id   || '';
+  }
 }
 
 async function loadSidebarProjects() {
