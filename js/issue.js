@@ -291,12 +291,16 @@ async function loadComments() {
 
   const { data, error } = await supabaseClient
     .from('comments')
-    .select('*, user:profiles(id,name,avatar_url)')
+    .select('*, user:profiles!user_id(id,name,avatar_url)')
     .eq('issue_id', issueId)
     .order('created_at', { ascending: true });
 
   const el = document.getElementById('comments-list');
-  if (error) { el.innerHTML = '<p class="text-danger" style="font-size:13.5px">読み込み失敗</p>'; return; }
+  if (error) {
+    console.error('[loadComments] Supabase error:', error);
+    el.innerHTML = `<p class="text-danger" style="font-size:13.5px">読み込み失敗 (${error.code || '?'}: ${error.message || '不明なエラー'})</p>`;
+    return;
+  }
 
   if (!data || data.length === 0) {
     el.innerHTML = '<p class="text-center text-muted py-3" style="font-size:13.5px">コメントはまだありません</p>';
@@ -617,22 +621,39 @@ function setupCommentSubmit() {
     }
 
     // コメント / アクティビティログを投稿
-    const { error } = await supabaseClient.from('comments').insert({
+    let insertError;
+    const fullPayload = {
       issue_id:      issueId,
       user_id:       currentProfile?.id,
       content:       content || null,
       is_activity:   isActivity,
       activity_data: isActivity ? changes : null,
-    });
+    };
+    const { error: err1 } = await supabaseClient.from('comments').insert(fullPayload);
+    if (err1) {
+      console.error('[comment insert] error:', err1);
+      // is_activity / activity_data 列が未作成の場合はフォールバック
+      if (err1.code === '42703' || err1.message?.includes('is_activity') || err1.message?.includes('activity_data')) {
+        const { error: err2 } = await supabaseClient.from('comments').insert({
+          issue_id: issueId,
+          user_id:  currentProfile?.id,
+          content:  content || null,
+        });
+        insertError = err2;
+      } else {
+        insertError = err1;
+      }
+    }
 
     btn.disabled = false;
-    if (!error) {
+    if (!insertError) {
       prevReadAt = new Date().toISOString();
       textarea.value = '';
       await loadComments();
       await markIssueAsRead();
       if (content) parseMentionsAndNotify(content);
     } else {
+      console.error('[comment insert fallback] error:', insertError);
       showError('送信に失敗しました');
     }
   });
