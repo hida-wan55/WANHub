@@ -307,8 +307,9 @@ async function loadComments() {
     return;
   }
 
-  // 確認状況を一括取得（テーブル未作成の場合は無視）
   const commentIds = data.map(c => c.id);
+
+  // 確認状況を一括取得（checkmark用）
   const confirmMap = {};
   try {
     const { data: confs, error: confErr } = await supabaseClient
@@ -320,6 +321,12 @@ async function loadComments() {
       });
     }
   } catch (_) { /* comment_confirmations テーブル未作成時は無視 */ }
+
+  // 全メンバーの既読時刻を取得（アイコン濃淡用）
+  const readMap = {}; // user_id → read_at
+  const { data: allReads } = await supabaseClient
+    .from('issue_reads').select('user_id, read_at').eq('issue_id', issueId);
+  (allReads || []).forEach(r => { readMap[r.user_id] = r.read_at; });
 
   el.innerHTML = data.map(c => {
     const isNew = prevReadAt && c.created_at > prevReadAt && c.user?.id !== currentProfile?.id;
@@ -346,13 +353,19 @@ async function loadComments() {
         <div class="comment-content">${renderCommentContent(c.content)}</div>
       </div>` : '';
 
-    // 確認アイコン
-    const iconsHtml = projectMembers.map(p => `
-      <span class="confirm-icon-wrap ${confirmedSet.has(p.id) ? 'confirmed' : ''}"
-            data-user-id="${p.id}" title="${escapeHtml(p.name)}">
+    // 確認アイコン（2段階：既読=濃く / 確認済み=チェック）
+    const iconsHtml = projectMembers.map(p => {
+      const hasRead      = readMap[p.id] && c.created_at <= readMap[p.id]; // ページ訪問済み
+      const hasConfirmed = confirmedSet.has(p.id);                          // 確認ボタン押した
+      const cls = hasConfirmed ? 'confirmed' : hasRead ? 'read' : '';
+      const tip = hasConfirmed ? `${escapeHtml(p.name)}（確認済み）`
+                : hasRead      ? `${escapeHtml(p.name)}（既読）`
+                :                escapeHtml(p.name);
+      return `<span class="confirm-icon-wrap ${cls}" data-user-id="${p.id}" title="${tip}">
         ${avatarHtml(p, 22, 9)}
-        ${confirmedSet.has(p.id) ? '<span class="confirm-check-badge"><i class="bi bi-check-lg"></i></span>' : ''}
-      </span>`).join('');
+        ${hasConfirmed ? '<span class="confirm-check-badge"><i class="bi bi-check-lg"></i></span>' : ''}
+      </span>`;
+    }).join('');
 
     const confirmBtnHtml = currentProfile && !myConfirmed
       ? `<button class="confirm-btn" data-comment-id="${c.id}"><i class="bi bi-check2 me-1"></i>確認</button>`
@@ -388,7 +401,9 @@ async function loadComments() {
       if (!cErr) {
         const wrap = el.querySelector(`#comment-item-${cid} .confirm-icon-wrap[data-user-id="${currentProfile.id}"]`);
         if (wrap) {
+          wrap.classList.remove('read');
           wrap.classList.add('confirmed');
+          wrap.title = `${currentProfile.name}（確認済み）`;
           if (!wrap.querySelector('.confirm-check-badge')) {
             wrap.insertAdjacentHTML('beforeend', '<span class="confirm-check-badge"><i class="bi bi-check-lg"></i></span>');
           }

@@ -674,12 +674,13 @@ body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo
 }
 .confirm-icon-wrap {
   position: relative;
-  opacity: 0.3;
-  transition: opacity 0.15s;
+  opacity: 0.25;
+  transition: opacity 0.2s;
   cursor: default;
   display: inline-block;
 }
-.confirm-icon-wrap.confirmed { opacity: 1; }
+.confirm-icon-wrap.read      { opacity: 0.7; }   /* 既読：やや濃く */
+.confirm-icon-wrap.confirmed { opacity: 1; }      /* 確認済み：最大 + チェック */
 .confirm-check-badge {
   position: absolute;
   bottom: -2px; right: -2px;
