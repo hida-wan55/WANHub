@@ -352,7 +352,7 @@ async function loadComments() {
   el.innerHTML = data.map(c => {
     const isNew = prevReadAt && c.created_at > prevReadAt && c.user?.id !== currentProfile?.id;
     const confirmedSet = confirmMap[c.id] || new Set();
-    const myConfirmed  = confirmedSet.has(currentProfile?.id);
+    const myConfirmed  = confirmedSet.has(currentProfile?.id) || c.user?.id === currentProfile?.id;
 
     // 変更ログ
     let activityHtml = '';
