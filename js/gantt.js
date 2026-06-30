@@ -76,6 +76,7 @@ async function loadIssues() {
   if (error) { showError('課題の読み込みに失敗しました'); return; }
   allIssues = data || [];
   renderGantt();
+  scrollToToday();
 }
 
 // ---- レンダリング ----
@@ -279,6 +280,16 @@ function renderEmptyState(totalWidth) {
   `;
 }
 
+function scrollToToday() {
+  const container   = document.getElementById('gantt-container');
+  const todayStr    = new Date().toISOString().split('T')[0];
+  const dates       = buildDateStrings(rangeStartDate, DAYS_SHOW);
+  const todayOffset = daysBetween(dates[0], todayStr);
+  const todayX      = todayOffset * DAY_WIDTH;
+  // 今日の2日前から表示（今日が左端近くに来る）
+  container.scrollLeft = Math.max(0, todayX - DAY_WIDTH * 2);
+}
+
 function setupNavigation() {
   document.getElementById('btn-prev').addEventListener('click', () => {
     rangeStartDate = new Date(rangeStartDate.getFullYear(), rangeStartDate.getMonth() - 1, 1);
@@ -291,6 +302,7 @@ function setupNavigation() {
   document.getElementById('btn-today').addEventListener('click', () => {
     initRange();
     renderGantt();
+    scrollToToday();
   });
 }
 
