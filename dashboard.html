@@ -45,13 +45,13 @@
   <!-- メインコンテンツ -->
   <div class="main-content">
     <div class="top-header">
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item active">ダッシュボード</li>
-        </ol>
-      </nav>
-      <div class="d-flex gap-2">
-        <button class="btn btn-primary btn-sm" id="new-project-btn" style="display:none" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-kanban-fill" style="color:var(--primary);font-size:18px"></i>
+        <span style="font-size:17px;font-weight:700;color:var(--text)">WANHub</span>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:4px">ダッシュボード</span>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-primary btn-sm guest-hidden" id="new-project-btn" style="display:none" data-bs-toggle="modal" data-bs-target="#createProjectModal">
           <i class="bi bi-plus-lg me-1"></i>新規プロジェクト
         </button>
         <a href="/admin.html" class="btn btn-outline-secondary btn-sm" id="admin-btn" style="display:none">
@@ -63,59 +63,69 @@
     <div class="page-content">
       <div id="error-container" style="display:none" class="mb-3"></div>
 
-      <!-- 統計 -->
-      <div class="row g-3 mb-4">
-        <div class="col-6 col-md">
-          <div class="stat-card">
-            <p class="stat-number" id="stat-projects">-</p>
-            <p class="stat-label">プロジェクト数</p>
-          </div>
-        </div>
-        <div class="col-6 col-md">
-          <div class="stat-card clickable" data-filter="open">
-            <p class="stat-number" id="stat-open">-</p>
-            <p class="stat-label">未対応の課題</p>
-          </div>
-        </div>
-        <div class="col-6 col-md">
-          <div class="stat-card clickable" data-filter="in_progress">
-            <p class="stat-number" id="stat-in-progress">-</p>
-            <p class="stat-label">処理中の課題</p>
-          </div>
-        </div>
-        <div class="col-6 col-md">
-          <div class="stat-card clickable" data-filter="mine">
-            <p class="stat-number" id="stat-my-issues">-</p>
-            <p class="stat-label">自分の担当課題</p>
-          </div>
-        </div>
-        <div class="col-6 col-md">
-          <div class="stat-card clickable overdue-card" data-filter="overdue">
-            <p class="stat-number" id="stat-overdue">-</p>
-            <p class="stat-label">期限切れ</p>
-          </div>
-        </div>
-      </div>
+      <div class="row g-4">
 
-      <!-- プロジェクト一覧 -->
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="mb-0 fw-bold" style="font-size:15px">プロジェクト一覧</h6>
-      </div>
-      <div class="row g-3" id="projects-grid"></div>
-    </div>
-  </div>
+        <!-- 左カラム：プロジェクト + 自分の課題 -->
+        <div class="col-lg-5">
 
-  <!-- ダッシュボード課題リストモーダル -->
-  <div class="modal fade" id="issueListModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="issue-list-modal-title">課題一覧</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          <!-- プロジェクト一覧 -->
+          <div class="dash-panel mb-4">
+            <div class="dash-panel-header">
+              <span class="dash-panel-title"><i class="bi bi-folder2"></i>プロジェクト</span>
+            </div>
+            <div id="projects-list">
+              <div class="my-issue-empty">読み込み中...</div>
+            </div>
+          </div>
+
+          <!-- 自分の課題 -->
+          <div class="dash-panel">
+            <div class="dash-panel-header">
+              <span class="dash-panel-title"><i class="bi bi-person-check"></i>自分の課題</span>
+            </div>
+            <!-- タブ：担当 / 登録 -->
+            <div class="dash-tab-bar">
+              <span style="margin-right:4px">対象：</span>
+              <button class="dash-tab-btn active" id="tab-assigned">担当（<span id="assigned-count">0</span>）</button>
+              <button class="dash-tab-btn" id="tab-reported">登録（<span id="reported-count">0</span>）</button>
+            </div>
+            <!-- 期限フィルタ -->
+            <div class="dash-due-bar">
+              <span style="margin-right:4px">期限日：</span>
+              <button class="dash-due-btn active" data-due="all">すべて</button>
+              <button class="dash-due-btn" data-due="4days">4日以内（<span id="due-4days-count">0</span>）</button>
+              <button class="dash-due-btn" data-due="today">今日まで（<span id="due-today-count">0</span>）</button>
+              <button class="dash-due-btn" data-due="overdue">期限切れ（<span id="due-overdue-count">0</span>）</button>
+            </div>
+            <!-- テーブル -->
+            <div id="my-issues-table">
+              <div class="my-issue-empty">読み込み中...</div>
+            </div>
+          </div>
+
         </div>
-        <div class="modal-body" id="issue-list-modal-body" style="min-height:200px">
-          <div class="text-center text-muted py-4">読み込み中...</div>
+
+        <!-- 右カラム：最近の更新 -->
+        <div class="col-lg-7">
+          <div class="dash-panel">
+            <div class="dash-panel-header">
+              <span class="dash-panel-title"><i class="bi bi-activity"></i>最近の更新</span>
+              <div class="d-flex gap-2 align-items-center">
+                <span style="font-size:12px;color:var(--text-muted)">フィルタ：</span>
+                <select class="form-select form-select-sm" id="activity-filter" style="width:auto;font-size:12px;padding:2px 24px 2px 8px;height:28px">
+                  <option value="all">すべて</option>
+                  <option value="comment">コメント</option>
+                  <option value="update">更新</option>
+                  <option value="file">ファイル</option>
+                </select>
+              </div>
+            </div>
+            <div id="activity-feed" style="max-height:calc(100vh - 200px);overflow-y:auto">
+              <div class="my-issue-empty">読み込み中...</div>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -133,7 +143,7 @@
           <div class="mb-3">
             <label class="form-label">PJコード <span class="text-danger">*</span></label>
             <input type="text" id="project-code" class="form-control" placeholder="例：PJ01" maxlength="20" style="text-transform:uppercase">
-            <div class="form-text">課題番号のプレフィックスになります（例：PJ01-01）</div>
+            <div class="form-text">課題番号のプレフィックスになります（例：PJ01-001）</div>
           </div>
           <div class="mb-3">
             <label class="form-label">プロジェクト名 <span class="text-danger">*</span></label>

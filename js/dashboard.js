@@ -1,6 +1,11 @@
-let currentProfile = null;
-let allIssuesFull  = [];
-let myProjectIds   = null; // null=管理者(全PJ), 配列=非管理者の参加PJ一覧
+let currentProfile  = null;
+let myProjectIds    = null;   // null=管理者(全PJ), 配列=非管理者の参加PJ
+let myAssignedIssues = [];
+let myReportedIssues = [];
+let allActivityItems = [];    // フィード用（コメント＋ファイル統合済み）
+
+let activeTab = 'assigned';   // 'assigned' | 'reported'
+let activeDue = 'all';        // 'all' | '4days' | 'today' | 'overdue'
 
 const today = new Date().toISOString().split('T')[0];
 
@@ -21,14 +26,12 @@ async function init() {
     setupProfileModal(currentProfile);
 
     if (isCurrentUserAdmin()) {
-      document.getElementById('admin-btn').style.display      = 'inline-block';
-      // ゲストにはPJ作成ボタンを表示しない
+      document.getElementById('admin-btn').style.display = 'inline-block';
       if (currentProfile.role !== 'guest') {
-        document.getElementById('new-project-btn').style.display = 'inline-block';
+        document.getElementById('new-project-btn').style.display = 'inline-flex';
       }
-      myProjectIds = null; // 全PJ表示
+      myProjectIds = null;
     } else {
-      // 参加しているPJのIDを取得
       const { data: memberOf } = await supabaseClient
         .from('project_members').select('project_id').eq('user_id', currentProfile.id);
       myProjectIds = (memberOf || []).map(m => m.project_id);
@@ -40,17 +43,18 @@ async function init() {
   }
 
   await loadStatuses();
-  await Promise.all([loadProjects(), loadStats()]);
+  await Promise.all([loadProjects(), loadMyIssues(), loadActivityFeed()]);
   setupCreateProject();
-  setupStatCards();
+  setupMyIssueFilters();
+  setupActivityFilter();
 }
 
+// ===== プロジェクト一覧（リスト形式） =====
+
 async function loadProjects() {
-  // 表示対象プロジェクトを取得
-  // 管理者: 全PJ / 非管理者: (メンバー未設定のPJ) + (自分がメンバーのPJ)
   const { data: allProjects, error } = await supabaseClient
     .from('projects')
-    .select('id,name,code,description,created_at,status')
+    .select('id,name,code,description')
     .eq('status', 'active')
     .order('created_at', { ascending: false });
 
@@ -59,18 +63,14 @@ async function loadProjects() {
   let projects = allProjects || [];
 
   if (myProjectIds !== null) {
-    // メンバーが設定されているPJを特定し、自分が含まれるものだけ表示
     const { data: allMembers } = await supabaseClient
       .from('project_members').select('project_id, user_id');
     const projectsWithMembers = new Set((allMembers || []).map(m => m.project_id));
     const myMemberSet         = new Set(myProjectIds);
-    projects = projects.filter(p =>
-      !projectsWithMembers.has(p.id) || myMemberSet.has(p.id)
-    );
+    projects = projects.filter(p => !projectsWithMembers.has(p.id) || myMemberSet.has(p.id));
   }
 
-  document.getElementById('stat-projects').textContent = projects.length;
-
+  // サイドバー更新
   const sidebarEl = document.getElementById('sidebar-projects');
   sidebarEl.innerHTML = projects.length === 0
     ? '<div class="px-3 py-2" style="font-size:12px;color:rgba(201,214,227,0.4)">プロジェクトなし</div>'
@@ -81,189 +81,324 @@ async function loadProjects() {
         </a>
       `).join('');
 
-  const gridEl = document.getElementById('projects-grid');
+  // プロジェクトリスト（Backlog風）
+  const listEl = document.getElementById('projects-list');
   if (projects.length === 0) {
-    gridEl.innerHTML = `
-      <div class="col-12">
-        <div class="empty-state">
-          <i class="bi bi-folder-plus"></i>
-          <p>${myProjectIds !== null ? '参加しているプロジェクトがありません。' : 'プロジェクトがありません。右上のボタンから作成してください。'}</p>
-        </div>
-      </div>`;
+    listEl.innerHTML = '<div class="my-issue-empty">プロジェクトがありません</div>';
     return;
   }
 
-  const ids = projects.map(p => p.id);
-  const { data: counts } = await supabaseClient.from('issues').select('project_id').in('project_id', ids);
-  const countMap = {};
-  (counts || []).forEach(i => { countMap[i.project_id] = (countMap[i.project_id] || 0) + 1; });
-
-  gridEl.innerHTML = projects.map(p => `
-    <div class="col-12 col-md-6 col-xl-4">
-      <a href="/project.html?id=${p.id}" class="project-card">
-        <div class="project-card-name">
-          <i class="bi bi-folder2 me-2"></i>${escapeHtml(p.name)}
-          ${p.code ? `<span class="ms-1" style="font-size:11px;color:var(--text-muted)">[${escapeHtml(p.code)}]</span>` : ''}
+  listEl.innerHTML = projects.map(p => {
+    const initials = (p.code || p.name).slice(0, 4).toUpperCase();
+    return `
+      <a href="/project.html?id=${p.id}" class="dash-project-row">
+        <div class="dash-project-icon">${escapeHtml(initials)}</div>
+        <div style="min-width:0">
+          <div class="dash-project-name">${escapeHtml(p.name)}</div>
+          ${p.code ? `<div class="dash-project-code">${escapeHtml(p.code)}</div>` : ''}
         </div>
-        <div class="project-card-desc">${escapeHtml(p.description || '説明なし')}</div>
-        <div class="project-card-meta">
-          <span><i class="bi bi-list-check me-1"></i>${countMap[p.id] || 0}件の課題</span>
-          <span><i class="bi bi-calendar3 me-1"></i>${formatDate(p.created_at)}</span>
-        </div>
+        <i class="bi bi-chevron-right ms-auto" style="color:var(--text-muted);font-size:12px;flex-shrink:0"></i>
       </a>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-async function loadStats() {
-  let issueQuery = supabaseClient
-    .from('issues')
-    .select('id, title, status, priority, assignee_id, due_date, updated_at, parent_id, assignee:profiles!assignee_id(name), project:projects(id,name)')
-    .order('updated_at', { ascending: false });
+// ===== 自分の課題 =====
 
-  // 非管理者はメンバーPJの課題のみ
-  if (myProjectIds !== null) {
-    if (myProjectIds.length === 0) {
-      allIssuesFull = [];
-      ['stat-open','stat-in-progress','stat-my-issues','stat-overdue'].forEach(id => {
-        document.getElementById(id).textContent = '0';
-      });
-      return;
-    }
-    // メンバー未設定PJも含める
-    const { data: allMembers } = await supabaseClient
-      .from('project_members').select('project_id, user_id');
-    const projectsWithMembers = new Set((allMembers || []).map(m => m.project_id));
-    const myMemberSet         = new Set(myProjectIds);
-    // ここでは全課題取得後フィルタ（課題数が少ない前提）
-    issueQuery = issueQuery.or(
-      [...myMemberSet].map(id => `project_id.eq.${id}`).join(',')
-    );
+async function loadMyIssues() {
+  if (!currentProfile) return;
+
+  const base = supabaseClient
+    .from('issues')
+    .select('id,title,status,priority,due_date,issue_number,parent_id, project:projects(id,name,code)')
+    .neq('status', 'closed');
+
+  const [{ data: assigned }, { data: reported }] = await Promise.all([
+    base.eq('assignee_id', currentProfile.id).order('due_date', { ascending: true, nullsFirst: false }),
+    supabaseClient
+      .from('issues')
+      .select('id,title,status,priority,due_date,issue_number,parent_id, project:projects(id,name,code)')
+      .eq('reporter_id', currentProfile.id)
+      .neq('status', 'closed')
+      .order('due_date', { ascending: true, nullsFirst: false }),
+  ]);
+
+  myAssignedIssues = assigned || [];
+  myReportedIssues = reported || [];
+
+  document.getElementById('assigned-count').textContent = myAssignedIssues.length;
+  document.getElementById('reported-count').textContent = myReportedIssues.length;
+
+  updateDueCounts();
+  renderMyIssues();
+}
+
+function updateDueCounts() {
+  const issues = activeTab === 'assigned' ? myAssignedIssues : myReportedIssues;
+  const in4days = new Date(); in4days.setDate(in4days.getDate() + 4);
+  const in4daysStr = in4days.toISOString().split('T')[0];
+
+  document.getElementById('due-4days-count').textContent  = issues.filter(i => i.due_date && i.due_date <= in4daysStr && i.due_date >= today).length;
+  document.getElementById('due-today-count').textContent  = issues.filter(i => i.due_date && i.due_date <= today).length;
+  document.getElementById('due-overdue-count').textContent = issues.filter(i => i.due_date && i.due_date < today).length;
+}
+
+function filterByDue(issues) {
+  if (activeDue === 'all') return issues;
+  const in4days = new Date(); in4days.setDate(in4days.getDate() + 4);
+  const in4daysStr = in4days.toISOString().split('T')[0];
+  if (activeDue === '4days')  return issues.filter(i => i.due_date && i.due_date <= in4daysStr && i.due_date >= today);
+  if (activeDue === 'today')  return issues.filter(i => i.due_date && i.due_date <= today);
+  if (activeDue === 'overdue') return issues.filter(i => i.due_date && i.due_date < today);
+  return issues;
+}
+
+function issueKey(issue) {
+  if (!issue.project?.code) return issue.issue_number ? `#${String(issue.issue_number).padStart(3,'0')}` : '-';
+  if (!issue.issue_number) return '-';
+  return `${issue.project.code}-${String(issue.issue_number).padStart(3,'0')}`;
+}
+
+function renderMyIssues() {
+  const base    = activeTab === 'assigned' ? myAssignedIssues : myReportedIssues;
+  const issues  = filterByDue(base);
+  const el      = document.getElementById('my-issues-table');
+
+  if (issues.length === 0) {
+    el.innerHTML = '<div class="my-issue-empty">該当する課題はありません</div>';
+    return;
   }
 
-  const { data: issues } = await issueQuery;
-  if (!issues) return;
-  allIssuesFull = issues;
-
-  const overdue = issues.filter(i => i.due_date && i.due_date < today && !['closed', 'resolved'].includes(i.status));
-
-  document.getElementById('stat-open').textContent        = issues.filter(i => i.status === 'open').length;
-  document.getElementById('stat-in-progress').textContent = issues.filter(i => i.status === 'in_progress').length;
-  document.getElementById('stat-my-issues').textContent   = issues.filter(i => i.assignee_id === currentProfile?.id && i.status !== 'closed').length;
-  document.getElementById('stat-overdue').textContent     = overdue.length;
+  el.innerHTML = `
+    <table class="my-issue-table">
+      <thead>
+        <tr>
+          <th>キー</th>
+          <th>件名</th>
+          <th>優先度</th>
+          <th>状態</th>
+          <th>期限日</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${issues.map(i => {
+          const overdue = i.due_date && i.due_date < today;
+          return `
+            <tr>
+              <td><span class="issue-num">${escapeHtml(issueKey(i))}</span></td>
+              <td>
+                <a href="/issue.html?id=${i.id}" class="issue-title-link" style="font-size:12.5px">${escapeHtml(i.title)}</a>
+                <div style="font-size:10.5px;color:var(--text-muted)">${escapeHtml(i.project?.name || '')}</div>
+              </td>
+              <td>${priorityBadge(i.priority)}</td>
+              <td>${statusBadge(i.status)}</td>
+              <td style="font-size:12px;color:${overdue ? '#DC3545' : 'var(--text-muted)'}">
+                ${i.due_date ? formatDate(i.due_date) : '-'}
+                ${overdue ? '<span class="overdue-badge">期限切れ</span>' : ''}
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
-function setupStatCards() {
-  const labelMap = {
-    open:        '未対応の課題',
-    in_progress: '処理中の課題',
-    mine:        '自分の担当課題',
-    overdue:     '期限切れの課題',
-  };
+function setupMyIssueFilters() {
+  document.getElementById('tab-assigned').addEventListener('click', () => {
+    activeTab = 'assigned';
+    document.getElementById('tab-assigned').classList.add('active');
+    document.getElementById('tab-reported').classList.remove('active');
+    updateDueCounts();
+    renderMyIssues();
+  });
+  document.getElementById('tab-reported').addEventListener('click', () => {
+    activeTab = 'reported';
+    document.getElementById('tab-reported').classList.add('active');
+    document.getElementById('tab-assigned').classList.remove('active');
+    updateDueCounts();
+    renderMyIssues();
+  });
 
-  document.querySelectorAll('.stat-card.clickable').forEach(card => {
-    card.addEventListener('click', () => {
-      const filter = card.dataset.filter;
-      const title  = labelMap[filter] || '課題一覧';
-      const issues = filterIssues(filter);
-
-      document.getElementById('issue-list-modal-title').textContent = `${title}（${issues.length}件）`;
-
-      if (issues.length === 0) {
-        document.getElementById('issue-list-modal-body').innerHTML =
-          '<div class="text-center text-muted py-5" style="font-size:13px">該当する課題はありません</div>';
-      } else {
-        // 全課題マップ（サブタスクの親タイトル参照用）
-        const allIssueMap = {};
-        allIssuesFull.forEach(i => { allIssueMap[i.id] = i; });
-
-        // 表示順を構築: 親課題 → その直下にサブタスク（インデント）
-        const issueIdSet  = new Set(issues.map(i => i.id));
-        const subByParent = {};
-        issues.filter(i => i.parent_id).forEach(i => {
-          if (!subByParent[i.parent_id]) subByParent[i.parent_id] = [];
-          subByParent[i.parent_id].push(i);
-        });
-
-        const rendered   = new Set();
-        const orderedItems = [];
-
-        // まず親課題（parent_idなし）を追加し、その直後にサブタスク
-        issues.filter(i => !i.parent_id).forEach(p => {
-          orderedItems.push({ issue: p, isSubTask: false });
-          rendered.add(p.id);
-          (subByParent[p.id] || []).forEach(s => {
-            orderedItems.push({ issue: s, isSubTask: true });
-            rendered.add(s.id);
-          });
-        });
-
-        // 親がこのリストにないサブタスク（親が別フィルタ結果にある場合など）
-        issues.filter(i => i.parent_id && !rendered.has(i.id)).forEach(i => {
-          orderedItems.push({ issue: i, isSubTask: true });
-          rendered.add(i.id);
-        });
-
-        document.getElementById('issue-list-modal-body').innerHTML =
-          `<div class="px-3 py-1">${orderedItems.map(({ issue: i, isSubTask }) => {
-            const overdueMark = i.due_date && i.due_date < today && !['closed','resolved'].includes(i.status)
-              ? '<span class="overdue-badge">期限切れ</span>' : '';
-            const indentStyle = isSubTask ? 'padding-left:20px;' : '';
-            const subPrefix   = isSubTask
-              ? '<span style="color:var(--text-muted);font-size:11px;margin-right:3px">↳</span>' : '';
-            const parentName  = isSubTask && !issueIdSet.has(i.parent_id)
-              ? allIssueMap[i.parent_id]?.title : null;
-            return `
-              <div class="dash-issue-row" style="${indentStyle}">
-                <div class="dash-issue-title-wrap">
-                  <div>${subPrefix}<a href="/issue.html?id=${i.id}" class="dash-issue-link">${escapeHtml(i.title)}${overdueMark}</a></div>
-                  <div class="dash-issue-project">
-                    <i class="bi bi-folder2 me-1"></i>${escapeHtml(i.project?.name || '-')}
-                    ${parentName ? `<span class="ms-2" style="color:var(--text-muted)">▸ ${escapeHtml(parentName)}</span>` : ''}
-                  </div>
-                </div>
-                ${statusBadge(i.status)}
-                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">${i.assignee?.name ? escapeHtml(i.assignee.name) : '-'}</span>
-                <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">${formatDate(i.due_date)}</span>
-              </div>
-            `;
-          }).join('')}</div>`;
-      }
-
-      new bootstrap.Modal(document.getElementById('issueListModal')).show();
+  document.querySelectorAll('.dash-due-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeDue = btn.dataset.due;
+      document.querySelectorAll('.dash-due-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderMyIssues();
     });
   });
 }
 
-function filterIssues(filter) {
-  switch (filter) {
-    case 'open':        return allIssuesFull.filter(i => i.status === 'open');
-    case 'in_progress': return allIssuesFull.filter(i => i.status === 'in_progress');
-    case 'mine':        return allIssuesFull.filter(i => i.assignee_id === currentProfile?.id && i.status !== 'closed');
-    case 'overdue':     return allIssuesFull.filter(i => i.due_date && i.due_date < today && !['closed','resolved'].includes(i.status));
-    default:            return allIssuesFull;
-  }
+// ===== アクティビティフィード =====
+
+async function loadActivityFeed() {
+  const [{ data: comments }, { data: files }] = await Promise.all([
+    supabaseClient
+      .from('comments')
+      .select('id,content,is_activity,created_at, user:profiles!user_id(id,name,avatar_url), issue:issues!issue_id(id,title,issue_number,project:projects(id,name,code))')
+      .order('created_at', { ascending: false })
+      .limit(60),
+    supabaseClient
+      .from('attachments')
+      .select('id,file_name,created_at, user:profiles(id,name,avatar_url), issue:issues(id,title,issue_number,project:projects(id,name,code))')
+      .order('created_at', { ascending: false })
+      .limit(20),
+  ]);
+
+  const commentItems = (comments || []).map(c => ({
+    type:       c.is_activity ? 'update' : 'comment',
+    created_at: c.created_at,
+    user:       c.user,
+    issue:      c.issue,
+    content:    c.content,
+  }));
+
+  const fileItems = (files || []).map(f => ({
+    type:       'file',
+    created_at: f.created_at,
+    user:       f.user,
+    issue:      f.issue,
+    content:    f.file_name,
+  }));
+
+  allActivityItems = [...commentItems, ...fileItems]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  renderActivityFeed(allActivityItems);
 }
+
+function renderActivityFeed(items) {
+  const el = document.getElementById('activity-feed');
+
+  if (items.length === 0) {
+    el.innerHTML = '<div class="my-issue-empty">更新履歴がありません</div>';
+    return;
+  }
+
+  // 日付でグループ化
+  const groups = {};
+  items.forEach(item => {
+    const d = item.created_at.slice(0, 10);
+    if (!groups[d]) groups[d] = [];
+    groups[d].push(item);
+  });
+
+  el.innerHTML = Object.entries(groups).map(([date, groupItems]) => {
+    const label = formatDateGroupLabel(date);
+    return `
+      <div class="feed-date-label">${label}</div>
+      ${groupItems.map(item => renderFeedItem(item)).join('')}
+    `;
+  }).join('');
+}
+
+function renderFeedItem(item) {
+  const badgeClass = item.type;
+  const badgeLabel = item.type === 'comment' ? 'コメント' : item.type === 'update' ? '更新' : 'ファイル';
+  const userName   = escapeHtml(item.user?.name || '-');
+  const issueTitle = escapeHtml(item.issue?.title || '-');
+  const issueKey2  = item.issue ? issueKey(item.issue) : '';
+  const issueId    = item.issue?.id;
+  const projName   = escapeHtml(item.issue?.project?.name || '');
+  const timeLabel  = timeAgo(item.created_at);
+
+  let contentHtml = '';
+  if (item.type === 'comment' && item.content) {
+    contentHtml = `<div class="feed-content">${escapeHtml(item.content.slice(0, 120))}</div>`;
+  } else if (item.type === 'file') {
+    contentHtml = `<div class="feed-content"><i class="bi bi-paperclip me-1"></i>${escapeHtml(item.content)}</div>`;
+  }
+
+  return `
+    <div class="feed-item">
+      <div style="flex-shrink:0">${avatarHtml(item.user, 34, 13)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="feed-meta">
+          <span style="font-weight:600">${userName}</span>
+          <span style="color:var(--text-muted)">さんが課題に</span>
+          <span class="feed-badge ${badgeClass}">${badgeLabel}</span>
+          <span class="feed-time">${timeLabel}</span>
+        </div>
+        ${issueId ? `<a href="/issue.html?id=${issueId}" class="feed-issue-link">${issueKey2 ? `<span class="issue-num me-1">${escapeHtml(issueKey2)}</span>` : ''}${issueTitle}</a>` : `<div class="feed-issue-link" style="color:var(--text-muted)">${issueTitle}</div>`}
+        ${projName ? `<div class="feed-project-name"><i class="bi bi-folder2 me-1"></i>${projName}</div>` : ''}
+        ${contentHtml}
+      </div>
+    </div>
+  `;
+}
+
+function formatDateGroupLabel(dateStr) {
+  const d    = new Date(dateStr);
+  const days = ['日','月','火','水','木','金','土'];
+  const y    = d.getFullYear();
+  const m    = d.getMonth() + 1;
+  const day  = d.getDate();
+  const dow  = days[d.getDay()];
+  const todayD = new Date(today);
+  const diff   = Math.floor((todayD - d) / 86400000);
+  const prefix = diff === 0 ? '今日・' : diff === 1 ? '昨日・' : '';
+  return `${prefix}${y}年${m}月${day}日（${dow}）`;
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m    = Math.floor(diff / 60000);
+  if (m < 1)   return 'たった今';
+  if (m < 60)  return `${m}分前`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `約${h}時間前`;
+  const d = Math.floor(h / 24);
+  return `${d}日前`;
+}
+
+function setupActivityFilter() {
+  document.getElementById('activity-filter').addEventListener('change', (e) => {
+    const val = e.target.value;
+    const filtered = val === 'all'
+      ? allActivityItems
+      : allActivityItems.filter(i => i.type === val);
+    renderActivityFeed(filtered);
+  });
+}
+
+// ===== プロジェクト作成 =====
 
 function setupCreateProject() {
   document.getElementById('create-project-btn').addEventListener('click', async () => {
-    const name = document.getElementById('project-name').value.trim();
-    const code = document.getElementById('project-code').value.trim().toUpperCase();
+    const name  = document.getElementById('project-name').value.trim();
+    const code  = document.getElementById('project-code').value.trim().toUpperCase();
     const errEl = document.getElementById('modal-error');
 
     if (!code) {
       errEl.innerHTML = '<div class="alert alert-danger">PJコードを入力してください</div>';
-      errEl.style.display = 'block';
-      return;
+      errEl.style.display = 'block'; return;
     }
     if (!name) {
       errEl.innerHTML = '<div class="alert alert-danger">プロジェクト名を入力してください</div>';
-      errEl.style.display = 'block';
-      return;
+      errEl.style.display = 'block'; return;
     }
 
     const btn = document.getElementById('create-project-btn');
     btn.disabled = true; btn.textContent = '作成中...';
+
+    // 同名・同コードのPJが既に存在しないか確認（アーカイブ済みを除く）
+    const { data: dupCheck } = await supabaseClient
+      .from('projects').select('id,name,code')
+      .or(`name.ilike.${name},code.ilike.${code}`)
+      .neq('status', 'archived');
+    if (dupCheck && dupCheck.length > 0) {
+      const nameConflict = dupCheck.some(p => p.name?.toLowerCase() === name.toLowerCase());
+      const codeConflict = dupCheck.some(p => p.code?.toLowerCase() === code.toLowerCase());
+      const msg = nameConflict && codeConflict
+        ? '同じ名前・PJコードのプロジェクトが既に存在します'
+        : nameConflict ? '同じ名前のプロジェクトが既に存在します'
+        : 'このPJコードは既に使用されています';
+      errEl.innerHTML = `<div class="alert alert-danger">${msg}</div>`;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = '作成';
+      return;
+    }
 
     const { data, error } = await supabaseClient.from('projects')
       .insert({ name, code, description: document.getElementById('project-desc').value.trim() || null, created_by: currentProfile?.id })
@@ -274,11 +409,9 @@ function setupCreateProject() {
     if (error) {
       const isDup = error.code === '23505' || error.message?.includes('duplicate');
       errEl.innerHTML = `<div class="alert alert-danger">${isDup ? 'PJコードが既に使用されています' : '作成に失敗しました'}</div>`;
-      errEl.style.display = 'block';
-      return;
+      errEl.style.display = 'block'; return;
     }
 
-    // 作成者をPJメンバーに追加
     if (currentProfile?.id) {
       await supabaseClient.from('project_members').insert({ project_id: data.id, user_id: currentProfile.id });
     }
@@ -291,7 +424,6 @@ function setupCreateProject() {
     window.location.href = `/project.html?id=${data.id}`;
   });
 
-  // モーダルを閉じたらフォームをリセット
   document.getElementById('createProjectModal').addEventListener('hidden.bs.modal', () => {
     document.getElementById('project-name').value = '';
     document.getElementById('project-code').value = '';

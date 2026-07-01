@@ -351,10 +351,11 @@ function setupCreateIssue() {
     const btn = document.getElementById('create-issue-btn');
     btn.disabled = true; btn.textContent = '追加中...';
 
-    // PJ内の最大issue_numberを取得して+1で採番
+    // PJ内の最大issue_numberを取得して+1で採番（NULLのサブタスク等を除外）
     const { data: maxData } = await supabaseClient
       .from('issues').select('issue_number')
       .eq('project_id', projectId)
+      .not('issue_number', 'is', null)
       .order('issue_number', { ascending: false })
       .limit(1);
     const nextNumber = ((maxData?.[0]?.issue_number) || 0) + 1;
@@ -402,6 +403,23 @@ function setupEditProject() {
     const name = document.getElementById('edit-project-name').value.trim();
     const code = document.getElementById('edit-project-code').value.trim().toUpperCase();
     if (!name) return;
+
+    // 自分以外に同名・同コードのPJが存在しないか確認（アーカイブ済みを除く）
+    const { data: dupCheck } = await supabaseClient
+      .from('projects').select('id,name,code')
+      .or(`name.ilike.${name},code.ilike.${code}`)
+      .neq('id', projectId)
+      .neq('status', 'archived');
+    if (dupCheck && dupCheck.length > 0) {
+      const nameConflict = dupCheck.some(p => p.name?.toLowerCase() === name.toLowerCase());
+      const codeConflict = code && dupCheck.some(p => p.code?.toLowerCase() === code.toLowerCase());
+      const msg = nameConflict && codeConflict
+        ? '同じ名前・PJコードのプロジェクトが既に存在します'
+        : nameConflict ? '同じ名前のプロジェクトが既に存在します'
+        : 'このPJコードは既に使用されています';
+      alert(msg);
+      return;
+    }
 
     const { error } = await supabaseClient.from('projects').update({
       name,

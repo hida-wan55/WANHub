@@ -1104,6 +1104,13 @@ function setupCreateSubIssue() {
   const form     = document.getElementById('subtask-form');
   const titleEl  = document.getElementById('subtask-title-input');
 
+  // サブタスク（parent_idあり）にはサブタスクを作れない
+  if (issue?.parent_id) {
+    const addBtn = document.getElementById('add-subtask-btn');
+    if (addBtn) addBtn.style.display = 'none';
+    return;
+  }
+
   document.getElementById('add-subtask-btn').addEventListener('click', () => {
     form.style.display = 'block';
     titleEl.focus();

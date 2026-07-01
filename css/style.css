@@ -165,7 +165,7 @@ body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo
 
 /* ===== 課題詳細 ===== */
 .issue-detail-title { font-size: 21px; font-weight: 700; line-height: 1.3; margin: 0; }
-.issue-meta-panel { background: #F8F9FA; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.issue-meta-panel { background: #F8F9FA; border: 1px solid var(--border); border-radius: 8px; padding: 16px; max-height: calc(100vh - 100px); overflow-y: auto; }
 .issue-meta-item { margin-bottom: 14px; }
 .issue-meta-item:last-child { margin-bottom: 0; }
 .issue-meta-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; }
@@ -710,6 +710,68 @@ body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* ===== ダッシュボード（Backlog風） ===== */
+.dash-panel { background: #fff; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.dash-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; background: #F8F9FA; border-bottom: 1px solid var(--border);
+}
+.dash-panel-title { font-weight: 700; font-size: 13.5px; color: var(--text); display: flex; align-items: center; gap: 7px; }
+
+.dash-project-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  text-decoration: none; color: var(--text); transition: background 0.1s;
+}
+.dash-project-row:last-child { border-bottom: none; }
+.dash-project-row:hover { background: #F0F4FF; color: var(--text); }
+.dash-project-icon {
+  width: 36px; height: 36px; border-radius: 6px; background: var(--primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0; letter-spacing: -0.5px;
+}
+.dash-project-name { font-size: 13.5px; font-weight: 500; }
+.dash-project-code { font-size: 11px; color: var(--text-muted); }
+
+.dash-tab-bar {
+  display: flex; align-items: center; gap: 4px;
+  padding: 8px 16px; border-bottom: 1px solid var(--border); font-size: 12.5px; color: var(--text-muted);
+}
+.dash-tab-btn { background: none; border: none; cursor: pointer; padding: 2px 10px; border-radius: 12px; font-size: 12.5px; color: var(--text-muted); }
+.dash-tab-btn.active { background: var(--primary); color: #fff; font-weight: 600; }
+.dash-tab-btn:not(.active):hover { background: #E9ECEF; color: var(--text); }
+
+.dash-due-bar {
+  display: flex; align-items: center; gap: 4px;
+  padding: 7px 16px; border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text-muted); background: #FAFAFA; flex-wrap: wrap;
+}
+.dash-due-btn { background: none; border: none; cursor: pointer; padding: 1px 10px; border-radius: 10px; font-size: 12px; color: var(--text-muted); }
+.dash-due-btn.active { background: #D4EDDA; color: #155724; font-weight: 600; }
+.dash-due-btn:not(.active):hover { background: #E9ECEF; }
+
+.my-issue-table { width: 100%; border-collapse: collapse; }
+.my-issue-table th { padding: 7px 12px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--border); background: #F8F9FA; text-align: left; font-weight: 600; white-space: nowrap; }
+.my-issue-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12.5px; vertical-align: middle; }
+.my-issue-table tr:last-child td { border-bottom: none; }
+.my-issue-table tr:hover td { background: #F8FAFE; }
+.my-issue-empty { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
+
+.feed-date-label { padding: 7px 16px; background: #F8F9FA; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.feed-item { display: flex; gap: 11px; padding: 13px 16px; border-bottom: 1px solid var(--border); transition: background 0.1s; }
+.feed-item:hover { background: #FAFBFF; }
+.feed-item:last-child { border-bottom: none; }
+.feed-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-size: 13px; margin-bottom: 3px; }
+.feed-badge { font-size: 11px; padding: 1px 8px; border-radius: 10px; font-weight: 600; white-space: nowrap; }
+.feed-badge.comment { background: #D4EDDA; color: #155724; }
+.feed-badge.update  { background: #CCE5FF; color: #004085; }
+.feed-badge.file    { background: #FFF3CD; color: #856404; }
+.feed-time { font-size: 11.5px; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
+.feed-issue-link { font-size: 13px; font-weight: 500; color: var(--primary); text-decoration: none; display: block; margin-bottom: 2px; }
+.feed-issue-link:hover { text-decoration: underline; }
+.feed-content { font-size: 12px; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.feed-project-name { font-size: 11px; color: var(--text-muted); }
 
 /* ===== ゲストモード ===== */
 body.guest-mode .guest-hidden { display: none !important; }
